@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoCredCar - Pesquisas Veiculares Confiáveis</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+        }
+        .hero-bg {
+            background-image: linear-gradient(to right, rgba(0,0,0,0.0), rgba(0,0,100,0.8)), url('https://checkinforme.com.br/wp-content/uploads/2025/09/207826-saiba-o-que-considerar-na-hora-de-comprar-o-primeiro-carro.jpg');
+            background-size: cover;
+            background-position: center;
+        }
+        .cta-button {
+            transition: all 0.3s ease;
+        }
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .service-card, .product-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .service-card:hover, .product-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
+        }
+        .icon-placeholder {
+            width: 50px;
+            height: 50px;
+            background-color: #e0e0e0;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+            font-size: 1.5rem;
+            color: #333;
+        }
+        .product-image-placeholder {
+            width: 100%;
+            height: 180px;
+            background-color: #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #4a5568;
+            font-size: 1.25rem;
+            border-radius: 0.5rem 0.5rem 0 0;
+            margin-bottom: 0;
+        }
+        [data-aos] {
+            opacity: 0;
+            transition-property: opacity, transform !important;
+        }
+        .header-logo {
+            height: 36px;
+            max-height: 36px;
+            width: auto;
+        }
+        .buy-button {
+            background-color: #05144D;
+            transition: all 0.3s ease;
+        }
+        .buy-button:hover {
+            background-color: #071d6f;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(5, 20, 77, 0.3);
+        }
+        .pdf-button {
+            background-color: transparent;
+            border: 2px solid #05144D;
+            color: #05144D;
+            transition: all 0.3s ease;
+        }
+        .pdf-button:hover {
+            background-color: #05144D;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 10px -3px rgba(5, 20, 77, 0.3);
+        }
+        .shortcode-placeholder-section {
+            background-color: #f0f4f8;
+            border-top: 1px solid #e2e8f0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <header class="bg-white shadow-md sticky top-0 z-50">
+        <div class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <a href="#">
+                <img src="https://autocredcar.app.br/wp-content/uploads/2025/02/logo-acc.png" alt="Logo AutoCredCar" class="header-logo">
+            </a>
+            <nav class="space-x-4 hidden md:flex items-center">
+                <a href="#home" class="text-gray-600 hover:text-blue-600">Início</a>
+                <a href="https://autocredcar.app.br/loja/" class="text-gray-600 hover:text-blue-600">Loja</a>
+                <a href="#servicos" class="text-gray-600 hover:text-blue-600">Nossos Serviços</a>
+                <a href="#sobre" class="text-gray-600 hover:text-blue-600">Sobre Nós</a>
+                <a href="https://autocredcar.app.br/cart/" class="text-gray-600 hover:text-blue-600 flex items-center">
+                    <i class="fas fa-shopping-cart mr-1"></i>Carrinho
+                </a>
+                <a href="https://autocredcar.app.br/conta-de-afiliado" class="text-gray-600 hover:text-blue-600">Acesso Afiliado</a>
+            </nav>
+            <button id="mobile-menu-button" class="md:hidden text-gray-600 hover:text-blue-600 focus:outline-none" aria-label="Abrir menu" aria-expanded="false">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
+                </svg>
+            </button>
+        </div>
+        <div id="mobile-menu" class="md:hidden hidden bg-white shadow-lg">
+            <a href="#home" class="block px-6 py-3 text-gray-600 hover:bg-blue-50 hover:text-blue-600">Início</a>
+            <a href="https://autocredcar.app.br/loja/" class="block px-6 py-3 text-gray-600 hover:bg-blue-50 hover:text-blue-600">Loja</a>
+            <a href="#servicos" class="block px-6 py-3 text-gray-600 hover:bg-blue-50 hover:text-blue-600">Nossos Serviços</a>
+            <a href="#sobre" class="block px-6 py-3 text-gray-600 hover:bg-blue-50 hover:text-blue-600">Sobre Nós</a>
+            <a href="https://autocredcar.app.br/cart/" class="block px-6 py-3 text-gray-600 hover:bg-blue-50 hover:text-blue-600">
+                <i class="fas fa-shopping-cart mr-2"></i>Carrinho
+            </a>
+            <a href="https://autocredcar.app.br/conta-de-afiliado" class="block px-6 py-3 text-gray-600 hover:bg-blue-50 hover:text-blue-600">Entrar</a>
+        </div>
+    </header>
+
+    <section id="home" class="hero-bg text-white py-20 md:py-32">
+        <div class="container mx-auto px-6 text-center">
+            <h1 class="text-4xl md:text-6xl font-bold mb-6 leading-tight" data-aos="fade-up">Pesquisas Veiculares Completas e Confiáveis</h1>
+            <p class="text-lg md:text-xl mb-10 max-w-2xl mx-auto" data-aos="fade-up" data-aos-delay="200">Tome decisões seguras na compra ou venda do seu veículo. A AutoCredCar oferece o histórico completo que você precisa.</p>
+            <a href="#produtos" class="bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold py-4 px-10 rounded-lg text-lg cta-button" data-aos="fade-up" data-aos-delay="400">
+                Ver Planos de Pesquisa
+            </a>
+        </div>
+    </section>
+
+    <section id="servicos" class="py-16 md:py-24 bg-gray-50">
+        <div class="container mx-auto px-6">
+            <h2 class="text-3xl md:text-4xl font-bold text-center mb-4 text-blue-700" data-aos="fade-up">O Que Oferecemos em Nossas Pesquisas</h2>
+            <p class="text-center text-gray-600 mb-12 md:mb-16 max-w-xl mx-auto" data-aos="fade-up" data-aos-delay="100">Detalhes abrangentes para sua total segurança e informação.</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div class="bg-white p-8 rounded-xl shadow-lg service-card" data-aos="fade-up" data-aos-delay="200">
+                    <div class="icon-placeholder" aria-hidden="true">🚗</div>
+                    <h3 class="text-2xl font-semibold mb-3 text-blue-600">Histórico Completo</h3>
+                    <p class="text-gray-600 leading-relaxed">Verificação detalhada de débitos, multas, sinistros, leilões, e mais.</p>
+                </div>
+                <div class="bg-white p-8 rounded-xl shadow-lg service-card" data-aos="fade-up" data-aos-delay="300">
+                    <div class="icon-placeholder" aria-hidden="true">💰</div>
+                    <h3 class="text-2xl font-semibold mb-3 text-blue-600">Débitos e Restrições</h3>
+                    <p class="text-gray-600 leading-relaxed">Pendências financeiras, restrições judiciais ou administrativas.</p>
+                </div>
+                <div class="bg-white p-8 rounded-xl shadow-lg service-card" data-aos="fade-up" data-aos-delay="400">
+                    <div class="icon-placeholder" aria-hidden="true">⚖️</div>
+                    <h3 class="text-2xl font-semibold mb-3 text-blue-600">Análise de Leilão</h3>
+                    <p class="text-gray-600 leading-relaxed">Descubra se o veículo tem passagem por leilão e seus impactos.</p>
+                 </div>
+                 <div class="bg-white p-8 rounded-xl shadow-lg service-card" data-aos="fade-up" data-aos-delay="500">
+                    <div class="icon-placeholder" aria-hidden="true">🛠️</div>
+                    <h3 class="text-2xl font-semibold mb-3 text-blue-600">Histórico de Sinistros</h3>
+                    <p class="text-gray-600 leading-relaxed">Informações sobre acidentes e avarias anteriores.</p>
+                </div>
+                 <div class="bg-white p-8 rounded-xl shadow-lg service-card" data-aos="fade-up" data-aos-delay="600">
+                    <div class="icon-placeholder" aria-hidden="true">👤</div>
+                    <h3 class="text-2xl font-semibold mb-3 text-blue-600">Verificação de Proprietários</h3>
+                    <p class="text-gray-600 leading-relaxed">Conheça os proprietários anteriores do veículo.</p>
+                </div>
+                 <div class="bg-white p-8 rounded-xl shadow-lg service-card" data-aos="fade-up" data-aos-delay="700">
+                    <div class="icon-placeholder" aria-hidden="true">✅</div>
+                    <h3 class="text-2xl font-semibold mb-3 text-blue-600">Consulta de Gravame</h3>
+                    <p class="text-gray-600 leading-relaxed">Verifique se o veículo está alienado (financiamento ativo).</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="shortcode-section" class="py-16 md:py-24 shortcode-placeholder-section">
+        <div class="container mx-auto px-6">
+            <h2 class="text-3xl md:text-4xl font-bold text-center mb-4 text-blue-700" data-aos="fade-up">Realize uma consulta com a AutoCredCar!</h2>
+            <div class="bg-white p-6 md:p-10 rounded-xl shadow-lg text-center" data-aos="fade-up" data-aos-delay="200">
+                <div>
+                    <p class="text-gray-500 italic"> [form_request_vehicle_plate]</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+     <main>
+        <!-- Início da Seção de Produtos -->
+        <section id="produtos" class="py-16 md:py-24">
+    <div class="container mx-auto px-6">
+        <h2 class="text-3xl md:text-4xl font-bold text-center mb-4 text-blue-700" data-aos="fade-up">Nossas Pesquisas Veicular</h2>
+        <p class="text-center text-gray-600 mb-12 md:mb-16 max-w-xl mx-auto" data-aos="fade-up" data-aos-delay="100">Escolha o plano ideal para as suas necessidades e compre com segurança.</p>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            <div class="bg-white rounded-xl shadow-lg overflow-hidden product-card flex flex-col" data-aos="fade-up" data-aos-delay="200">
+                <div class="product-image-placeholder">
+                    <i class="fas fa-clipboard-check text-4xl text-gray-400"></i>
+                </div>
+                <div class="p-6 flex flex-col flex-grow">
+                    <h3 class="text-2xl font-semibold mb-2 text-blue-600">Auto Pericial</h3>
+                    <p class="text-gray-600 leading-relaxed mb-4 flex-grow">Análise detalhada para uma avaliação precisa do veículo.</p>
+                    <p class="text-3xl font-bold text-gray-800 mb-6">R$ 39,60</p>
+                    <a href="https://autocredcar.app.br/product/consulta-simples/" target="_blank" class="mt-auto w-full buy-button text-white font-bold py-3 px-6 rounded-lg text-center mb-3">
+                        <i class="fas fa-shopping-cart mr-2"></i> Comprar Agora
+                    </a>
+                    <a href="https://autocredcar.app.br/wp-content/uploads/2025/03/Exemplo-Pericia.pdf" target="_blank" class="w-full pdf-button font-bold py-3 px-6 rounded-lg text-center">
+                        <i class="fas fa-file-pdf mr-2"></i> Ver Exemplo PDF
+                    </a>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-lg overflow-hidden product-card flex flex-col" data-aos="fade-up" data-aos-delay="300">
+                <div class="product-image-placeholder">
+                    <i class="fas fa-file-invoice-dollar text-4xl text-gray-400"></i>
+                </div>
+                <div class="p-6 flex flex-col flex-grow">
+                    <h3 class="text-2xl font-semibold mb-2 text-blue-600">Consulta Gravame</h3>
+                    <p class="text-gray-600 leading-relaxed mb-4 flex-grow">Verifique a situação de financiamento e alienação do veículo.</p>
+                    <p class="text-3xl font-bold text-gray-800 mb-6">R$ 16,80</p>
+                    <a href="https://autocredcar.app.br/product/gravame/" target="_blank" class="mt-auto w-full buy-button text-white font-bold py-3 px-6 rounded-lg text-center mb-3">
+                        <i class="fas fa-shopping-cart mr-2"></i> Comprar Agora
+                    </a>
+                    <a href="https://autocredcar.app.br/wp-content/uploads/2025/03/Auto-Gravame-Exemplo.pdf.pdf" target="_blank" class="w-full pdf-button font-bold py-3 px-6 rounded-lg text-center">
+                        <i class="fas fa-file-pdf mr-2"></i> Ver Exemplo PDF
+                    </a>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-lg overflow-hidden product-card flex flex-col" data-aos="fade-up" data-aos-delay="400">
+                <div class="product-image-placeholder">
+                    <i class="fas fa-search-plus text-4xl text-gray-400"></i>
+                </div>
+                <div class="p-6 flex flex-col flex-grow">
+                    <h3 class="text-2xl font-semibold mb-2 text-blue-600">Auto Completa Top</h3>
+                    <p class="text-gray-600 leading-relaxed mb-4 flex-grow">A pesquisa mais completa, incluindo todos os detalhes essenciais.</p>
+                    <p class="text-3xl font-bold text-gray-800 mb-6">R$ 54,00</p>
+                    <a href="https://autocredcar.app.br/product/auto-pericia-top/" target="_blank" class="mt-auto w-full buy-button text-white font-bold py-3 px-6 rounded-lg text-center mb-3">
+                        <i class="fas fa-shopping-cart mr-2"></i> Comprar Agora
+                    </a>
+                    <a href="https://autocredcar.app.br/wp-content/uploads/2025/09/acc1.pdf" target="_blank" class="w-full pdf-button font-bold py-3 px-6 rounded-lg text-center">
+                        <i class="fas fa-file-pdf mr-2"></i> Ver Exemplo PDF
+                    </a>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-lg overflow-hidden product-card flex flex-col" data-aos="fade-up" data-aos-delay="500">
+                <div class="product-image-placeholder">
+                    <i class="fas fa-id-card text-4xl text-gray-400"></i>
+                </div>
+                <div class="p-6 flex flex-col flex-grow">
+                    <h3 class="text-2xl font-semibold mb-2 text-blue-600">Emissão de CRLV</h3>
+                    <p class="text-gray-600 leading-relaxed mb-4 flex-grow">Emita o Certificado de Registro e Licenciamento do Veículo.</p>
+                    <p class="text-3xl font-bold text-gray-800 mb-6">R$ 59,90</p>
+                    <a href="https://autocredcar.app.br/product/emissao-crlv/" target="_blank" class="mt-auto w-full buy-button text-white font-bold py-3 px-6 rounded-lg text-center mb-3">
+                        <i class="fas fa-shopping-cart mr-2"></i> Comprar Agora
+                    </a>
+                    <a href="#" target="_blank" class="w-full pdf-button font-bold py-3 px-6 rounded-lg text-center">
+                        <i class="fas fa-file-pdf mr-2"></i> Ver Exemplo PDF
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex justify-center mt-8">
+            <div class="bg-white rounded-xl shadow-lg overflow-hidden product-card flex flex-col w-full md:w-auto lg:max-w-xs" data-aos="fade-up" data-aos-delay="600">
+                <div class="product-image-placeholder">
+                    <i class="fas fa-gavel text-4xl text-gray-400"></i>
+                </div>
+                <div class="p-6 flex flex-col flex-grow">
+                    <h3 class="text-2xl font-semibold mb-2 text-blue-600">Bin+Leilão</h3>
+                    <p class="text-gray-600 leading-relaxed mb-4 flex-grow">Consulta de BIN com informações de passagem por leilão.</p>
+                    <p class="text-3xl font-bold text-gray-800 mb-6">R$ 21,60</p>
+                    <a href="https://autocredcar.app.br/product/auto-binleilao/" target="_blank" class="mt-auto w-full buy-button text-white font-bold py-3 px-6 rounded-lg text-center mb-3">
+                        <i class="fas fa-shopping-cart mr-2"></i> Comprar Agora
+                    </a>
+                    <a href="https://autocredcar.app.br/wp-content/uploads/2025/08/Modelo-auto-bin-leilao.pdf" target="_blank" class="w-full pdf-button font-bold py-3 px-6 rounded-lg text-center">
+                        <i class="fas fa-file-pdf mr-2"></i> Ver Exemplo PDF
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+    </div>
+</section>
+
+        <section id="como-funciona" class="py-16 md:py-24 bg-gray-50">
+            <div class="container mx-auto px-6">
+                <h2 class="text-3xl md:text-4xl font-bold text-center mb-4 text-blue-700" data-aos="fade-up">Como Funciona?</h2>
+                <p class="text-center text-gray-600 mb-12 md:mb-16 max-w-xl mx-auto" data-aos="fade-up" data-aos-delay="100">Realizar sua pesquisa veicular é simples, rápido e seguro.</p>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+                    <div class="p-6" data-aos="fade-right" data-aos-delay="200">
+                        <div class="bg-blue-500 text-white rounded-full w-16 h-16 flex items-center justify-center text-2xl font-bold mx-auto mb-6 shadow-md">1</div>
+                        <h3 class="text-xl font-semibold mb-2 text-blue-600">Escolha a Pesquisa e Informe os Dados</h3>
+                        <p class="text-gray-600">Selecione uma  de nossas pesquisa e forneça a placa ou chassi do veículo.</p>
+                    </div>
+                    <div class="p-6" data-aos="fade-up" data-aos-delay="300">
+                        <div class="bg-blue-500 text-white rounded-full w-16 h-16 flex items-center justify-center text-2xl font-bold mx-auto mb-6 shadow-md">2</div>
+                        <h3 class="text-xl font-semibold mb-2 text-blue-600">Realize o Pagamento Seguro</h3>
+                        <p class="text-gray-600">Efetue o pagamento através da nossa plataforma segura.</p>
+                    </div>
+                    <div class="p-6" data-aos="fade-left" data-aos-delay="400">
+                        <div class="bg-blue-500 text-white rounded-full w-16 h-16 flex items-center justify-center text-2xl font-bold mx-auto mb-6 shadow-md">3</div>
+                        <h3 class="text-xl font-semibold mb-2 text-blue-600">Receba o Relatório Completo</h3>
+                        <p class="text-gray-600">Em pouco tempo, você terá acesso ao relatório detalhado no seu e-mail ou ou Whatsapp.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="sobre" class="py-16 md:py-24 bg-blue-700 text-white">
+            <div class="container mx-auto px-6">
+                <h2 class="text-3xl md:text-4xl font-bold text-center mb-4" data-aos="fade-up">Por Que Escolher a AutoCredCar?</h2>
+                <p class="text-center text-blue-200 mb-12 md:mb-16 max-w-xl mx-auto" data-aos="fade-up" data-aos-delay="100">Somos especialistas em fornecer informações veiculares precisas para sua segurança e tranquilidade.</p>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div class="bg-blue-600 p-6 rounded-lg shadow-md text-center" data-aos="fade-up" data-aos-delay="200">
+                        <div class="text-yellow-400 text-4xl mb-4" aria-hidden="true">🛡️</div>
+                        <h3 class="text-xl font-semibold mb-2">Confiabilidade Total</h3>
+                        <p class="text-blue-100">Dados atualizados e de fontes seguras para você tomar a melhor decisão.</p>
+                    </div>
+                    <div class="bg-blue-600 p-6 rounded-lg shadow-md text-center" data-aos="fade-up" data-aos-delay="300">
+                        <div class="text-yellow-400 text-4xl mb-4" aria-hidden="true">⚡</div>
+                        <h3 class="text-xl font-semibold mb-2">Rapidez na Entrega</h3>
+                        <p class="text-blue-100">Receba seu relatório completo em minutos, diretamente no seu e-mail ou painel.</p>
+                    </div>
+                    <div class="bg-blue-600 p-6 rounded-lg shadow-md text-center" data-aos="fade-up" data-aos-delay="400">
+                        <div class="text-yellow-400 text-4xl mb-4" aria-hidden="true">📄</div>
+                        <h3 class="text-xl font-semibold mb-2">Relatórios Detalhados</h3>
+                        <p class="text-blue-100">Informações claras e completas para uma análise precisa do veículo.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="depoimentos" class="py-16 md:py-24 bg-gray-50">
+            <div class="container mx-auto px-6">
+                <h2 class="text-3xl md:text-4xl font-bold text-center mb-4 text-blue-700" data-aos="fade-up">O Que Nossos Clientes Dizem</h2>
+                <p class="text-center text-gray-600 mb-12 md:mb-16 max-w-xl mx-auto" data-aos="fade-up" data-aos-delay="100">A satisfação dos nossos clientes é a nossa prioridade.</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <div class="bg-white p-8 rounded-xl shadow-lg" data-aos="fade-up" data-aos-delay="200">
+                        <p class="text-gray-600 italic mb-4">"A pesquisa da AutoCredCar me salvou de um péssimo negócio! Descobri várias multas pendentes no carro que eu ia comprar. Recomendo!"</p>
+                        <p class="font-semibold text-blue-600">- João Silva</p>
+                        <p class="text-sm text-gray-500">Comprador de Veículo</p>
+                    </div>
+                    <div class="bg-white p-8 rounded-xl shadow-lg" data-aos="fade-up" data-aos-delay="300">
+                        <p class="text-gray-600 italic mb-4">"Serviço rápido e muito eficiente. O relatório é bem completo e fácil de entender. Usei para vender meu carro com mais transparência."</p>
+                        <p class="font-semibold text-blue-600">- Maria Oliveira</p>
+                        <p class="text-sm text-gray-500">Vendedora de Veículo</p>
+                    </div>
+                    <div class="bg-white p-8 rounded-xl shadow-lg" data-aos="fade-up" data-aos-delay="400">
+                        <p class="text-gray-600 italic mb-4">"Excelente atendimento e informações precisas. Consegui negociar melhor o valor do carro após a consulta. Valeu cada centavo!"</p>
+                        <p class="font-semibold text-blue-600">- Carlos Pereira</p>
+                        <p class="text-sm text-gray-500">Consultor Automotivo</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <footer class="bg-gray-800 text-gray-300 py-12">
+            <div class="container mx-auto px-6 text-center" data-aos="fade-up">
+                <p>&copy; <span id="currentYear"></span> AutoCredCar. Todos os direitos reservados.</p>
+                <p class="text-sm mt-2">Informações veiculares para sua segurança e tranquilidade.</p>
+                </div>
+        </footer>
+
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script>
+        AOS.init({
+            duration: 800,
+            once: true,
+            offset: 50,
+            easing: 'ease-in-out',
+        });
+
+        const mobileMenuButton = document.getElementById('mobile-menu-button');
+        const mobileMenu = document.getElementById('mobile-menu');
+        mobileMenuButton.addEventListener('click', () => {
+            const isExpanded = mobileMenuButton.getAttribute('aria-expanded') === 'true';
+            mobileMenu.classList.toggle('hidden');
+            mobileMenuButton.setAttribute('aria-expanded', !isExpanded);
+        });
+
+        const mobileLinks = mobileMenu.getElementsByTagName('a');
+        for (let link of mobileLinks) {
+            link.addEventListener('click', () => {
+                mobileMenu.classList.add('hidden');
+                mobileMenuButton.setAttribute('aria-expanded', 'false');
+            });
+        }
+        
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                if (this.getAttribute('href') !== "#") {
+                    const targetId = this.getAttribute('href');
+                    const targetElement = document.querySelector(targetId);
+                    if (targetElement) {
+                        const headerOffset = document.querySelector('header').offsetHeight;
+                        const elementPosition = targetElement.getBoundingClientRect().top;
+                        const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+                    
+                        window.scrollTo({
+                            top: offsetPosition,
+                            behavior: "smooth"
+                        });
+                    }
+                }
+            });
+        });
+
+        document.getElementById('currentYear').textContent = new Date().getFullYear();
+    </script>
+
+</body>
+</html>
