@@ -44,8 +44,9 @@ return [
             'charset' => 'utf8',
             'prefix' => '',
             'prefix_indexes' => true,
-            'encrypt' => env('DB_AGREGADOS_ENCRYPT', false),
-            'trust_server_certificate' => env('DB_AGREGADOS_TRUST_SERVER_CERTIFICATE', false),
+            // ODBC/Microsoft driver espera valores de string como 'yes'/'no' — force string defaults
+            'encrypt' => (string) env('DB_AGREGADOS_ENCRYPT', 'no'),
+            'trust_server_certificate' => (string) env('DB_AGREGADOS_TRUST_SERVER_CERTIFICATE', 'no'),
         ], // <-- Esta vírgula é crucial para o próximo bloco 'mysql'
 
         'mysql' => [

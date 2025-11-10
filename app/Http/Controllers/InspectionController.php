@@ -245,64 +245,81 @@ class InspectionController extends Controller
     }
 
     /**
+     * Rota de diagnóstico: testa a conexão com a base sqlsrv_agregados (para depuração).
+     */
+    public function testConnection()
+    {
+        try {
+            // tenta obter o PDO da conexão nomeada
+            DB::connection('sqlsrv_agregados')->getPdo();
+            return response()->json(['ok' => true, 'message' => 'Conexão com sqlsrv_agregados estabelecida com sucesso.']);
+        } catch (\Exception $e) {
+            \Log::error('testConnection: ' . $e->getMessage());
+            return response()->json(['ok' => false, 'message' => 'Falha ao conectar: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
      * Puxa dados do veículo da BIN Agregados e atualiza o registro local (Ação Manual do Analista).
+     * Atualizado: usa bindings para evitar injeção, corrige precedência do WHERE e adiciona logs.
      *
      * @param  \App\Models\Inspection  $inspection
      * @return \Illuminate\Http\RedirectResponse
      */
     public function pullAggregates(Inspection $inspection)
     {
-        $placa = strtoupper($inspection->vehicle->license_plate);
-        $placa = str_replace('-', '', $placa); // Remove hífens da placa
-        $dados_agregados = null;
+        $placa = strtoupper($inspection->vehicle->license_plate ?? '');
+        $placa = str_replace('-', '', $placa);
 
         try {
-            // Lógica de busca externa (Query atualizada)
+            \Log::info('pullAggregates: iniciando busca', ['inspection_id' => $inspection->id, 'placa' => $placa]);
+
+            // Consulta reduzida e segura (somente colunas que existem na tabela)
             $query = "
                 SELECT TOP 1
-                    A.NR_Chassi, A.NR_Motor, A.NR_AnoFabricacao, A.NR_AnoModelo, C.NM_MarcaModelo,
-                    I.NM_CorVeiculo, D.NM_Combustivel,
-                    A.NR_Renavam, A.NR_Cilindradas, A.NR_PesoBrutoTotal
+                    A.NR_Chassi, A.NR_Motor, A.NR_AnoFabricacao, A.NR_AnoModelo,
+                    C.NM_MarcaModelo,
+                    I.NM_CorVeiculo,
+                    D.NM_Combustivel
                 FROM VeiculosAgregados.dbo.Agregados2020 A
-                LEFT JOIN VeiculosAgregados.dbo.TB_ModeloVeiculo C ON CAST(A.CD_MarcaModelo AS FLOAT) = C.CD_MarcaModelo
-                LEFT JOIN VeiculosAgregados.dbo.TB_Combustivel D ON CAST(A.CD_Combustivel AS FLOAT) = D.CD_Combustivel
-                LEFT JOIN VeiculosAgregados.dbo.TB_CorVeiculo I ON CAST(A.CD_CorVeiculo AS FLOAT) = I.CD_CorVeiculo
-                WHERE NR_PlacaModeloAntigo = '{$placa}' OR NR_PlacaModeloNovo = '{$placa}'
+                LEFT JOIN VeiculosAgregados.dbo.TB_ModeloVeiculo C ON TRY_CAST(A.CD_MarcaModelo AS FLOAT) = C.CD_MarcaModelo
+                LEFT JOIN VeiculosAgregados.dbo.TB_Combustivel D ON TRY_CAST(A.CD_Combustivel AS FLOAT) = D.CD_Combustivel
+                LEFT JOIN VeiculosAgregados.dbo.TB_CorVeiculo I ON TRY_CAST(A.CD_CorVeiculo AS FLOAT) = I.CD_CorVeiculo
+                WHERE (NR_PlacaModeloAntigo = ? OR NR_PlacaModeloNovo = ?)
                 AND A.NR_AnoFabricacao IS NOT NULL
             ";
-            
-            $resultado = DB::connection('sqlsrv_agregados')->select($query);
-            
+
+            $resultado = DB::connection('sqlsrv_agregados')->select($query, [$placa, $placa]);
+
+            \Log::info('pullAggregates: resultados obtidos', ['inspection_id' => $inspection->id, 'count' => count($resultado ?? [])]);
+
             if (!empty($resultado)) {
-                $dados_agregados = (array) $resultado[0];
+                $dados = (array) $resultado[0];
+
+                $vehicleData = [
+                    'vin' => $dados['NR_Chassi'] ?? null,
+                    'engine_number' => $dados['NR_Motor'] ?? null,
+                    'brand' => $dados['NM_MarcaModelo'] ?? $inspection->vehicle->brand,
+                    'model' => $dados['NM_MarcaModelo'] ?? $inspection->vehicle->model,
+                    'color' => $dados['NM_CorVeiculo'] ?? $inspection->vehicle->color,
+                    'fuel_type' => $dados['NM_Combustivel'] ?? $inspection->vehicle->fuel_type,
+                    'year' => isset($dados['NR_AnoFabricacao']) ? (int) $dados['NR_AnoFabricacao'] : $inspection->vehicle->year,
+                ];
+
+                $inspection->vehicle->update($vehicleData);
+
+                return back()->with('success', 'Dados do veículo atualizados com sucesso a partir da base de agregados!');
             }
 
+            return back()->with('warning', 'Nenhuma informação encontrada na base de agregados para a placa ' . $placa . '.');
+
+        } catch (\Illuminate\Database\QueryException $e) {
+            \Log::error('pullAggregates: query error - ' . $e->getMessage(), ['inspection_id' => $inspection->id ?? null]);
+            return back()->with('error', 'Erro ao consultar a base de agregados.');
         } catch (\Exception $e) {
-            \Log::error('Erro ao buscar dados agregados manualmente: ' . $e->getMessage());
-            return back()->with('error', 'Erro ao conectar com o banco de dados de agregados. Verifique a conexão.');
+            \Log::error('pullAggregates: unexpected error - ' . $e->getMessage(), ['inspection_id' => $inspection->id ?? null]);
+            return back()->with('error', 'Erro inesperado ao buscar dados de agregados.');
         }
-
-        if ($dados_agregados) {
-            $vehicleData = [
-                'vin' => $dados_agregados['NR_Chassi'] ?? null,
-                'engine_number' => $dados_agregados['NR_Motor'] ?? null,
-                'brand' => $dados_agregados['NM_MarcaModelo'] ?? $inspection->vehicle->brand,
-                'model' => $dados_agregados['NM_MarcaModelo'] ?? $inspection->vehicle->model,
-                'color' => $dados_agregados['NM_CorVeiculo'] ?? $inspection->vehicle->color,
-                'fuel_type' => $dados_agregados['NM_Combustivel'] ?? $inspection->vehicle->fuel_type,
-                'year' => $dados_agregados['NR_AnoFabricacao'] ?? $inspection->vehicle->year,
-                // Campos adicionais
-                // 'renavam' => $dados_agregados['NR_Renavam'] ?? null,
-                // 'cilindradas' => $dados_agregados['NR_Cilindradas'] ?? null,
-                // 'peso_bruto_total' => $dados_agregados['NR_PesoBrutoTotal'] ?? null,
-            ];
-            
-            $inspection->vehicle->update($vehicleData);
-
-            return back()->with('success', 'Dados do veículo atualizados com sucesso a partir da base de agregados!');
-        }
-
-        return back()->with('warning', 'Nenhuma informação encontrada na base de agregados para a placa ' . $placa . '.');
     }
 
     /**
@@ -315,7 +332,8 @@ class InspectionController extends Controller
         $request->validate([
             'details' => 'nullable|array',
             'details.*.item_name' => 'required|string',
-            'details.*.status' => 'required|string|in:Conforme,Não Conforme,N/A',
+            // aceitar qualquer string aqui e normalizar abaixo para evitar problemas de case/acentuação
+            'details.*.status' => 'required|string',
             'details.*.observation' => 'nullable|string|max:255',
         ]);
 
@@ -324,8 +342,37 @@ class InspectionController extends Controller
             return;
         }
 
+        // Normalização de status aceitos (entrada -> valor padronizado salvo no banco)
+        $statusMap = [
+            'conforme' => 'Conforme',
+            'conform' => 'Conforme',
+            'não conforme' => 'Não Conforme',
+            'nao conforme' => 'Não Conforme',
+            'não_conforme' => 'Não Conforme',
+            'nao_conforme' => 'Não Conforme',
+            'n/a' => 'N/A',
+            'na' => 'N/A',
+            'n/a' => 'N/A',
+        ];
+
         // Itera e salva cada item do checklist
         foreach ($request->details as $detailData) {
+            $rawStatus = (string) ($detailData['status'] ?? '');
+            $normalizedKey = mb_strtolower(trim(str_replace(['_', '-'], ' ', $rawStatus)));
+            $savedStatus = $statusMap[$normalizedKey] ?? $detailData['status'];
+
+            // Log when the incoming status wasn't mapped so we can track unexpected values from the UI
+            if (!array_key_exists($normalizedKey, $statusMap)) {
+                \Log::warning(sprintf(
+                    'saveInspectionDetails: unmapped status for inspection=%s item="%s" raw="%s" normalized="%s" saving="%s"',
+                    $inspection->id ?? 'unknown',
+                    $detailData['item_name'] ?? 'unknown',
+                    $rawStatus,
+                    $normalizedKey,
+                    $savedStatus
+                ));
+            }
+
             InspectionDetail::updateOrCreate(
                 [
                     // Condições para encontrar o registro
@@ -334,7 +381,7 @@ class InspectionController extends Controller
                 ],
                 [
                     // Dados para atualizar ou criar
-                    'status' => $detailData['status'],
+                    'status' => $savedStatus,
                     'observation' => $detailData['observation'],
                 ]
             );
@@ -354,19 +401,17 @@ class InspectionController extends Controller
         $request->validate(['notes' => 'nullable|string']);
 
         try {
-            DB::beginTransaction();
+            DB::transaction(function () use ($request, $inspection) {
+                // 1. Salva os dados do Checklist
+                $this->saveInspectionDetails($request, $inspection);
 
-            // 1. Salva os dados do Checklist
-            $this->saveInspectionDetails($request, $inspection);
-
-            // 2. Atualiza o status da Vistoria
-            $inspection->update([
-                'analyst_id' => Auth::id(),
-                'notes' => $request->notes,
-                'status' => 'approved',
-            ]);
-
-            DB::commit();
+                // 2. Atualiza o status da Vistoria
+                $inspection->update([
+                    'analyst_id' => Auth::id(),
+                    'notes' => $request->notes,
+                    'status' => 'approved',
+                ]);
+            });
 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -389,19 +434,17 @@ class InspectionController extends Controller
         $request->validate(['notes' => 'nullable|string']);
 
         try {
-            DB::beginTransaction();
+            DB::transaction(function () use ($request, $inspection) {
+                // 1. Salva os dados do Checklist
+                $this->saveInspectionDetails($request, $inspection);
 
-            // 1. Salva os dados do Checklist
-            $this->saveInspectionDetails($request, $inspection);
-
-            // 2. Atualiza o status da Vistoria
-            $inspection->update([
-                'analyst_id' => Auth::id(),
-                'notes' => $request->notes,
-                'status' => 'disapproved',
-            ]);
-
-            DB::commit();
+                // 2. Atualiza o status da Vistoria
+                $inspection->update([
+                    'analyst_id' => Auth::id(),
+                    'notes' => $request->notes,
+                    'status' => 'disapproved',
+                ]);
+            });
 
         } catch (\Exception $e) {
             DB::rollBack();

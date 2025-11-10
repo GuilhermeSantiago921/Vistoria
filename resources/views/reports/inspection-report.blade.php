@@ -54,6 +54,12 @@
         .photos-table img { max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 3px; }
         .photo-caption { font-weight: bold; font-size: 10px; margin-top: 5px; display: block; }
 
+        /* Melhorias para geração de PDF e prevenção de quebras */
+        .section { page-break-inside: avoid; -webkit-region-break-inside: avoid; }
+        .checklist-table tr { page-break-inside: avoid; }
+        .photos-table img { max-height: 220px; object-fit: contain; }
+        .photo-placeholder { height:120px; display:flex; align-items:center; justify-content:center; border:1px dashed #ccc; color:#777; font-size:10px; }
+
     </style>
 </head>
 <body>
@@ -63,14 +69,20 @@
         <div class="header">
             <img src="{{ public_path('logo.png') }}" alt="Logo" class="logo">
             <h1>LAUDO DE VISTORIA VEICULAR</h1>
-            <p>Laudo ID: #{{ $inspection->id }} | Data da Solicitação: {{ $inspection->created_at->format('d/m/Y H:i') }}</p>
+            <p>Laudo ID: #{{ $inspection->id }} | Data da Solicitação: {{ optional($inspection->created_at)->format('d/m/Y H:i') ?? 'N/A' }}</p>
         </div>
 
         {{-- ============================== VEREDITO FINAL [ATUALIZADO] ============================== --}}
         <div class="verdict-section">
-            @if($inspection->status == 'approved')
+            @php $status = strtolower(trim($inspection->status ?? ''));
+                // aceita valores em inglês e português
+                $isApproved = in_array($status, ['approved', 'aprovado', 'conforme', 'ok']);
+                $isDisapproved = in_array($status, ['disapproved', 'reprovado', 'reprovada', 'não conforme', 'nao conforme', 'reprovado', 'reprovada', 'nok']);
+            @endphp
+
+            @if($isApproved)
                 <div class="verdict-box status-approved">EM CONFORMIDADE</div>
-            @elseif($inspection->status == 'disapproved')
+            @elseif($isDisapproved)
                 <div class="verdict-box status-disapproved">NÃO CONFORME</div>
             @else
                 <div class="verdict-box status-pending">PENDENTE DE ANÁLISE</div>
@@ -84,27 +96,27 @@
                 <table class="data-table">
                     <tr>
                         <td class="label">PLACA</td>
-                        <td class="value">{{ $inspection->vehicle->license_plate }}</td>
+                        <td class="value">{{ optional($inspection->vehicle)->license_plate ?? 'N/A' }}</td>
                         <td class="label">MARCA/MODELO</td>
-                        <td class="value">{{ $inspection->vehicle->brand ?? 'N/A' }} / {{ $inspection->vehicle->model ?? 'N/A' }}</td>
+                        <td class="value">{{ optional($inspection->vehicle)->brand ?? 'N/A' }} / {{ optional($inspection->vehicle)->model ?? 'N/A' }}</td>
                     </tr>
                     <tr>
                         <td class="label">ANO FAB/MODELO</td>
-                        <td class="value">{{ $inspection->vehicle->year ?? 'N/A' }}</td>
+                        <td class="value">{{ optional($inspection->vehicle)->year ?? 'N/A' }}</td>
                         <td class="label">COR / COMB.</td>
-                        <td class="value">{{ $inspection->vehicle->color ?? 'N/A' }} / {{ $inspection->vehicle->fuel_type ?? 'N/A' }}</td>
+                        <td class="value">{{ optional($inspection->vehicle)->color ?? 'N/A' }} / {{ optional($inspection->vehicle)->fuel_type ?? 'N/A' }}</td>
                     </tr>
                     <tr>
                         <td class="label">CHASSI (VIN)</td>
-                        <td class="value">{{ $inspection->vehicle->vin ?? 'Não Informado' }}</td>
+                        <td class="value">{{ optional($inspection->vehicle)->vin ?? 'Não Informado' }}</td>
                         <td class="label">MOTOR</td>
-                        <td class="value">{{ $inspection->vehicle->engine_number ?? 'Não Informado' }}</td>
+                        <td class="value">{{ optional($inspection->vehicle)->engine_number ?? 'Não Informado' }}</td>
                     </tr>
                      <tr>
                         <td class="label">SOLICITANTE</td>
-                        <td class="value">{{ $inspection->client->name ?? $inspection->vehicle->user->name }}</td>
+                        <td class="value">{{ optional($inspection->client)->name ?? optional(optional($inspection->vehicle)->user)->name ?? 'N/A' }}</td>
                         <td class="label">HODÔMETRO</td>
-                        <td class="value">{{ $inspection->vehicle->odometer ? number_format($inspection->vehicle->odometer, 0, ',', '.') . ' km' : 'N/A' }}</td>
+                        <td class="value">{{ optional($inspection->vehicle)->odometer ? number_format(optional($inspection->vehicle)->odometer, 0, ',', '.') . ' km' : 'N/A' }}</td>
                     </tr>
                 </table>
             </div>
@@ -114,7 +126,7 @@
         <div class="section">
             <h2>PARECER TÉCNICO FINAL</h2>
             <div class="section-content">
-                <p><strong>Analista Responsável:</strong> {{ $inspection->analyst->name ?? 'Aguardando Análise' }}</p>
+                <p><strong>Analista Responsável:</strong> {{ optional($inspection->analyst)->name ?? 'Aguardando Análise' }}</p>
                 <div class="notes-text">
                     {{ $inspection->notes ?? 'Nenhuma observação final registrada.' }}
                 </div>
@@ -161,14 +173,15 @@
                             @if($identificationDetails->isNotEmpty())
                                 <tr><td colspan="3" style="background: #eef; font-weight: bold;">ITENS DE IDENTIFICAÇÃO</td></tr>
                                 @foreach($identificationDetails as $detail)
+                                    @php
+                                        $s = mb_strtolower(trim($detail->status ?? ''));
+                                        $cls = 'status-na';
+                                        if(in_array($s, ['conforme','ok','aprovado','approved'])) { $cls = 'status-ok'; }
+                                        elseif(\Illuminate\Support\Str::contains($s, ['não','nao','não conforme','nao conforme','reprovado','disapproved','nok'])) { $cls = 'status-nok'; }
+                                    @endphp
                                     <tr>
                                         <td>{{ $detail->item_name }}</td>
-                                        <td class="status 
-                                            @if($detail->status == 'Conforme') status-ok 
-                                            @elseif($detail->status == 'Não Conforme') status-nok 
-                                            @else status-na @endif">
-                                            {{ $detail->status }}
-                                        </td>
+                                        <td class="status {{ $cls }}">{{ $detail->status ?? '---' }}</td>
                                         <td class="obs">{{ $detail->observation ?? '---' }}</td>
                                     </tr>
                                 @endforeach
@@ -178,14 +191,15 @@
                             @if($structuralDetails->isNotEmpty())
                                 <tr><td colspan="3" style="background: #eef; font-weight: bold;">ITENS ESTRUTURAIS</td></tr>
                                 @foreach($structuralDetails as $detail)
+                                    @php
+                                        $s = mb_strtolower(trim($detail->status ?? ''));
+                                        $cls = 'status-na';
+                                        if(in_array($s, ['conforme','ok','aprovado','approved'])) { $cls = 'status-ok'; }
+                                        elseif(\Illuminate\Support\Str::contains($s, ['não','nao','não conforme','nao conforme','reprovado','disapproved','nok'])) { $cls = 'status-nok'; }
+                                    @endphp
                                     <tr>
                                         <td>{{ $detail->item_name }}</td>
-                                        <td class="status 
-                                            @if($detail->status == 'Conforme') status-ok 
-                                            @elseif($detail->status == 'Não Conforme') status-nok 
-                                            @else status-na @endif">
-                                            {{ $detail->status }}
-                                        </td>
+                                        <td class="status {{ $cls }}">{{ $detail->status ?? '---' }}</td>
                                         <td class="obs">{{ $detail->observation ?? '---' }}</td>
                                     </tr>
                                 @endforeach
@@ -206,14 +220,17 @@
                         $photos = $inspection->photos;
                     @endphp
                     
-                    {{-- [REMOVIDO] Bloco de destaque da Etiqueta --}}
-                    
                     {{-- Mostra TODAS as fotos em pares --}}
                     @foreach($photos->chunk(2) as $chunk)
                         <tr>
                             @foreach($chunk as $photo)
                                 <td class="photo-cell">
-                                    <img src="{{ public_path('storage/' . $photo->path) }}" alt="{{ $photo->label }}">
+                                    @php $photoPath = public_path('storage/' . ($photo->path ?? '')); @endphp
+                                    @if($photo->path && file_exists($photoPath))
+                                        <img src="{{ $photoPath }}" alt="{{ $photo->label }}">
+                                    @else
+                                        <div class="photo-placeholder">Imagem não disponível</div>
+                                    @endif
                                     <span class="photo-caption">{{ $photo->label ?? 'Foto' }}</span>
                                 </td>
                             @endforeach
