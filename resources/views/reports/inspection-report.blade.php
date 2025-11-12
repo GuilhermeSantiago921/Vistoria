@@ -5,7 +5,7 @@
     <title>Laudo de Vistoria - ID #{{ $inspection->id }}</title>
     <style>
         /* Reset e Fontes */
-        body { font-family: 'Helvetica', Arial, sans-serif; margin: 0; padding: 0; font-size: 10px; line-height: 1.35; color: #222; }
+        body { font-family: 'Helvetica', Arial, sans-serif; margin: 0; padding: 0; font-size: 10px; line-height: 1.35; color: #1a1a1a; }
         .container { width: 100%; margin: 0 auto; padding: 22px 28px; box-sizing: border-box; }
         .page-break { page-break-before: always; }
 
@@ -17,7 +17,7 @@
             width: 80%;
             text-align: center;
             z-index: 9999;
-            opacity: 0.22; /* increased from 0.12 */
+            opacity: 0.22;
             transform: translateX(-50%) rotate(-18deg);
             pointer-events: none;
         }
@@ -25,57 +25,57 @@
         /* Cabeçalho em duas colunas */
         .header { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #0b5db3; padding-bottom: 10px; margin-bottom: 12px; z-index: 1; }
         .header-left { display:flex; align-items:center; gap:12px; }
-        .logo { max-width: 110px; height: auto; }
+        .logo { max-width: 160px; height: auto; padding: 8px; }
         .company { text-align: left; }
-        .company h1 { margin: 0; font-size: 18px; color: #0b5db3; }
-        .company p { margin: 2px 0 0; font-size: 11px; color: #444; }
+        .company h1 { margin: 0; font-size: 18px; color: #0b5db3; font-weight: 800; }
+        .company p { margin: 2px 0 0; font-size: 11px; color: #333; font-weight: 600; }
         .header-right { text-align: right; font-size: 11px; }
-        .meta { font-size: 11px; color: #444; }
+        .meta { font-size: 11px; color: #333; font-weight: 600; }
 
         /* Veredito */
         .verdict-section { text-align: center; margin: 14px 0; }
-        .verdict-box { display: inline-block; padding: 8px 18px; font-size: 15px; font-weight: 700; color: #fff; border-radius: 4px; }
+        .verdict-box { display: inline-block; padding: 10px 20px; font-size: 16px; font-weight: 800; color: #fff; border-radius: 4px; letter-spacing: 0.5px; }
         .status-approved { background-color: #059669; }
         .status-disapproved { background-color: #ef4444; }
-        .status-pending { background-color: #f59e0b; color: #111; }
+        .status-pending { background-color: #f59e0b; color: #000; font-weight: 800; }
 
         /* Seções */
-        .section { margin-bottom: 14px; border: 1px solid #e6e6e6; border-radius: 4px; overflow: hidden; background: #fff; }
-        .section h2 { background: #f6f9ff; color: #0b5db3; font-size: 13px; margin: 0; padding: 8px 12px; border-bottom: 1px solid #e6eef8; }
+        .section { margin-bottom: 14px; border: 1px solid #d0d0d0; border-radius: 4px; overflow: hidden; background: #fff; }
+        .section h2 { background: #f0f5ff; color: #0b5db3; font-size: 13px; margin: 0; padding: 10px 12px; border-bottom: 2px solid #0b5db3; font-weight: 800; letter-spacing: 0.5px; }
         .section-content { padding: 10px 12px; }
 
         /* Dados veiculo */
         .data-table { width: 100%; border-collapse: collapse; }
-        .data-table td { padding: 6px 8px; font-size: 11px; vertical-align: top; }
-        .label { font-weight: 700; width: 22%; color: #334; background: #fafafa; }
-        .value { width: 28%; }
+        .data-table td { padding: 6px 8px; font-size: 11px; vertical-align: top; color: #1a1a1a; }
+        .label { font-weight: 800; width: 22%; color: #0b5db3; background: #f5f9ff; border: 1px solid #e0e8f0; }
+        .value { width: 28%; font-weight: 600; color: #1a1a1a; border: 1px solid #e0e8f0; }
 
         /* Checklist */
         .checklist-table { width: 100%; border-collapse: collapse; margin-top: 6px; }
-        .checklist-table th, .checklist-table td { border: 1px solid #e8eef6; padding: 6px 8px; text-align: left; font-size: 10px; }
-        .checklist-table th { background: #f7fbff; font-weight: 700; color: #0b5db3; }
-        .status-ok { color: #059669; font-weight: 700; }
-        .status-nok { color: #dc2626; font-weight: 700; }
-        .status-na { color: #6b7280; font-weight: 700; }
-        .obs { font-size: 9px; color: #444; }
+        .checklist-table th, .checklist-table td { border: 1px solid #d0d0d0; padding: 7px 8px; text-align: left; font-size: 10px; color: #1a1a1a; }
+        .checklist-table th { background: #e8f0ff; font-weight: 800; color: #0b5db3; letter-spacing: 0.5px; }
+        .status-ok { color: #059669; font-weight: 800; }
+        .status-nok { color: #dc2626; font-weight: 800; }
+        .status-na { color: #5a5a5a; font-weight: 700; }
+        .obs { font-size: 9px; color: #333; font-weight: 600; }
 
         /* Notas/parecer */
-        .notes-text { padding: 10px; border: 1px solid #f0f0f0; background: #ffffff; border-radius: 4px; min-height: 36px; font-size: 11px; }
+        .notes-text { padding: 10px; border: 1px solid #d0d0d0; background: #ffffff; border-radius: 4px; min-height: 36px; font-size: 11px; color: #1a1a1a; font-weight: 600; line-height: 1.4; }
 
         /* Fotos - grid responsivo para PDF */
         .photos-grid { display: table; width: 100%; border-collapse: collapse; margin-top: 8px; }
         .photo-cell { display: table-cell; width: 50%; padding: 6px; vertical-align: top; text-align: center; }
         .photos-grid img { max-width: 100%; height: auto; border: 1px solid #e2e8f0; border-radius: 4px; object-fit: contain; max-height: 260px; }
-        .photo-caption { display:block; margin-top:6px; font-weight:600; font-size:10px; }
-        .photo-placeholder { height:160px; display:flex; align-items:center; justify-content:center; border:1px dashed #ccc; color:#777; font-size:10px; }
+        .photo-caption { display:block; margin-top:6px; font-weight:800; font-size:10px; color: #1a1a1a; }
+        .photo-placeholder { height:160px; display:flex; align-items:center; justify-content:center; border:1px dashed #bbb; color:#555; font-size:10px; font-weight: 600; }
 
         /* Assinatura e rodapé */
         .signature { margin-top: 18px; display:flex; justify-content:space-between; gap:20px; }
-        .signature .block { width: 48%; text-align:left; }
-        .signature .line { border-top:1px solid #bbb; margin-top:42px; width:80%; }
+        .signature .block { width: 48%; text-align:left; font-size: 11px; color: #1a1a1a; font-weight: 600; }
+        .signature .line { border-top:1.5px solid #333; margin-top:42px; width:80%; }
 
-        footer { position: fixed; bottom: 12px; left: 0; right: 0; text-align: center; font-size: 10px; color: #666; }
-        .page-number { float: right; font-size: 10px; color: #666; }
+        footer { position: fixed; bottom: 12px; left: 0; right: 0; text-align: center; font-size: 10px; color: #555; font-weight: 600; }
+        .page-number { float: right; font-size: 10px; color: #555; font-weight: 600; }
 
         /* Forçar quebras apropriadas */
         .section { page-break-inside: avoid; -webkit-region-break-inside: avoid; }
