@@ -22,6 +22,7 @@ class Vehicle extends Model
         'license_plate',    // <-- Atualizado de 'placa'
         'vin',              // <-- Atualizado de 'chassi'
         'engine_number',    // <-- Atualizado de 'motor'
+        'gearbox_number',   // <-- Adicionado (número do câmbio)
         'brand',            // <-- Atualizado de 'marca'
         'model',            // <-- Adicionado (o controller já usa)
         'year',             // <-- Atualizado de 'ano_fabricacao' / 'ano_modelo'
