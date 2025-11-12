@@ -1,162 +1,115 @@
 <x-app-layout>
     <x-slot name="header">
-        <div class="flex justify-between item                        @if (Auth::user()->inspection_credits > 0)
-                            <a href="{{ route('inspections.create') }}" class="flex flex-col items-center justify-center h-full">
-                                <span class="text-5xl mb-3">🚀</span>
-                                <p class="font-black text-center text-lg">Iniciar Nova Vistoria</p>
-                            </a>
-                        @else
-                            <a href="{{ route('payment.form') }}" class="flex flex-col items-center justify-center h-full">
-                                <span class="text-5xl mb-3">💰</span>
-                                <p class="font-black text-center text-lg">Adquirir Créditos</p>
-                            </a>
-                        @endif            <div>
+        <div class="flex justify-between items-center">
+            <div>
                 <h2 class="font-black text-4xl text-gray-900">
                     👋 Bem-vindo(a), {{ Auth::user()->name }}!
                 </h2>
-                <p class="text-gray-700 font-bold mt-1 text-lg">Sistema de Inspeção Veicular Professional</p>
+                <p class="text-gray-600 font-semibold mt-2">Sistema de Inspeção Veicular</p>
             </div>
             <div class="text-right">
-                <p class="text-gray-700 font-bold">{{ now()->format('d \\d\\e F \\d\\e Y') }}</p>
+                <p class="text-gray-700 text-sm">{{ now()->format('d/m/Y') }}</p>
             </div>
         </div>
     </x-slot>
 
-    <div class="py-8">
+    <div class="py-12 bg-white min-h-screen">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div class="space-y-8">
                 
-                {{-- VISÃO GERAL RÁPIDA - Cards Com Gradient --}}
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {{-- RESUMO RÁPIDO --}}
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                     
                     {{-- Card 1: Créditos Disponíveis --}}
-                    <div class="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 to-blue-800 text-white p-6 shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
-                        <div class="absolute inset-0 bg-white opacity-0 group-hover:opacity-10 transition-opacity"></div>
-                        <div class="relative z-10">
-                            <div class="flex items-center justify-between mb-4">
-                                <p class="text-xs uppercase opacity-90 font-black tracking-widest">Créditos</p>
-                                <span class="text-3xl">💳</span>
-                            </div>
-                            <p class="text-5xl font-black mb-2">{{ Auth::user()->inspection_credits ?? 0 }}</p>
-                            <p class="text-sm text-blue-50 font-bold">
-                                @if (Auth::user()->inspection_credits > 0)
-                                    ✅ Você pode enviar uma vistoria agora
-                                @else
-                                    ❌ Adquira créditos para continuar
-                                @endif
-                            </p>
-                        </div>
-                    </div>
-
-                    {{-- Card 2: Status Último Laudo --}}
-                    <div class="group relative overflow-hidden rounded-2xl bg-white p-6 shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 border-2 border-gray-200">
-                        <div class="relative z-10">
-                            @php
-                                $lastInspection = $inspections->first();
-                            @endphp
-                            <div class="flex items-center justify-between mb-4">
-                                <p class="text-xs uppercase text-gray-800 font-black tracking-widest">Último Status</p>
-                                <span class="text-3xl">📋</span>
-                            </div>
-
-                            @if ($lastInspection)
-                                <p class="text-3xl font-black mb-2 @if($lastInspection->status == 'approved') text-green-600 @elseif($lastInspection->status == 'disapproved') text-red-600 @else text-amber-600 @endif">
-                                    @if($lastInspection->status == 'approved')
-                                        ✅ Aprovado
-                                    @elseif($lastInspection->status == 'disapproved')
-                                        ❌ Reprovado
+                    <div class="group bg-white rounded-2xl shadow-md border border-gray-100 p-6 hover:shadow-lg transition-all">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <p class="text-gray-500 text-sm font-semibold">Créditos Disponíveis</p>
+                                <p class="text-4xl font-black text-blue-600 mt-2">{{ Auth::user()->inspection_credits ?? 0 }}</p>
+                                <p class="text-gray-600 text-sm mt-1">
+                                    @if (Auth::user()->inspection_credits > 0)
+                                        ✅ Pronto para enviar
                                     @else
-                                        ⏳ Pendente
+                                        ❌ Adquira créditos
                                     @endif
                                 </p>
-                                <p class="text-sm text-gray-800 font-bold">
-                                    <strong>{{ $lastInspection->vehicle->license_plate }}</strong> - {{ $lastInspection->created_at->diffForHumans() }}
-                                </p>
-                            @else
-                                <p class="text-3xl font-black mb-2 text-gray-600">🆕 Novo</p>
-                                <p class="text-sm text-gray-700 font-bold">Nenhuma vistoria enviada ainda</p>
-                            @endif
-                        </div>
-                    </div>
-
-                    {{-- Card 3: Total de Vistorias --}}
-                    <div class="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-purple-600 to-pink-600 text-white p-6 shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
-                        <div class="absolute inset-0 bg-white opacity-0 group-hover:opacity-10 transition-opacity"></div>
-                        <div class="relative z-10">
-                            <div class="flex items-center justify-between mb-4">
-                                <p class="text-xs uppercase opacity-90 font-black tracking-widest">Totalizadas</p>
-                                <span class="text-3xl">📊</span>
                             </div>
-                            <p class="text-5xl font-black mb-2">{{ $inspections->count() }}</p>
-                            <p class="text-sm text-pink-50 font-bold">Vistorias realizadas</p>
+                            <span class="text-5xl">💳</span>
                         </div>
                     </div>
 
-                    {{-- Card 4: CTA Button --}}
-                    <div class="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-green-500 to-emerald-600 text-white p-6 shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer">
-                        @if (Auth::user()->inspection_credits > 0)
-                            <a href="{{ route('inspections.create') }}" class="flex flex-col items-center justify-center h-full">
-                                <span class="text-5xl mb-3 group-hover:scale-110 transition">🚀</span>
-                                <p class="font-black text-center text-lg">Iniciar Nova Vistoria</p>
-                            </a>
-                        @else
-                            <a href="{{ route('payment.form') }}" class="flex flex-col items-center justify-center h-full">
-                                <span class="text-5xl mb-3 group-hover:scale-110 transition">💳</span>
-                                <p class="font-black text-center text-lg">Adquirir Créditos</p>
-                            </a>
-                        @endif
+                    {{-- Card 2: Último Laudo --}}
+                    <div class="group bg-white rounded-2xl shadow-md border border-gray-100 p-6 hover:shadow-lg transition-all">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <p class="text-gray-500 text-sm font-semibold">Último Status</p>
+                                @php $lastInspection = $inspections->first(); @endphp
+                                @if ($lastInspection)
+                                    <p class="text-3xl font-black mt-2 @if($lastInspection->status == 'approved') text-green-600 @elseif($lastInspection->status == 'disapproved') text-red-600 @else text-amber-600 @endif">
+                                        @if($lastInspection->status == 'approved') ✅ Aprovado @elseif($lastInspection->status == 'disapproved') ❌ Reprovado @else ⏳ Pendente @endif
+                                    </p>
+                                    <p class="text-gray-600 text-sm mt-1">{{ $lastInspection->vehicle->license_plate }} • {{ $lastInspection->created_at->format('d/m') }}</p>
+                                @else
+                                    <p class="text-2xl font-black text-gray-600 mt-2">🆕 Novo</p>
+                                    <p class="text-gray-600 text-sm mt-1">Nenhuma vistoria ainda</p>
+                                @endif
+                            </div>
+                            <span class="text-5xl">📋</span>
+                        </div>
                     </div>
+
+                    {{-- Card 3: CTA --}}
+                    <a href="@if (Auth::user()->inspection_credits > 0) {{ route('inspections.create') }} @else {{ route('payment.form') }} @endif" class="group bg-blue-50 rounded-2xl shadow-md border border-blue-200 p-6 hover:shadow-lg transition-all hover:bg-blue-100">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                @if (Auth::user()->inspection_credits > 0)
+                                    <p class="text-blue-700 text-sm font-semibold">Ação Rápida</p>
+                                    <p class="text-3xl font-black text-blue-600 mt-2">Iniciar</p>
+                                    <p class="text-blue-600 text-sm mt-1 font-medium">Nova Vistoria</p>
+                                @else
+                                    <p class="text-blue-700 text-sm font-semibold">Ação Rápida</p>
+                                    <p class="text-3xl font-black text-blue-600 mt-2">Comprar</p>
+                                    <p class="text-blue-600 text-sm mt-1 font-medium">Créditos</p>
+                                @endif
+                            </div>
+                            <span class="text-4xl opacity-30">→</span>
+                        </div>
+                    </a>
                 </div>
 
-                {{-- SEÇÃO DE HISTÓRICO --}}
-                <div class="bg-white rounded-2xl shadow-lg border-2 border-gray-200 overflow-hidden">
-                    <div class="px-6 py-6 border-b-2 border-gray-200 bg-gradient-to-r from-gray-50 to-white">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <h3 class="text-3xl font-black text-gray-900">📋 Histórico de Laudos</h3>
-                                <p class="text-gray-700 font-bold mt-1">Suas inspeções recentes</p>
-                            </div>
-                            <a href="{{ route('inspections.history') }}" class="px-4 py-2 bg-blue-700 text-white rounded-lg hover:bg-blue-800 transition font-black">
-                                Ver Todos →
-                            </a>
-                        </div>
+                {{-- HISTÓRICO DE LAUDOS --}}
+                <div class="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-gray-100 bg-white flex items-center justify-between">
+                        <h3 class="text-lg font-black text-gray-900">📋 Histórico</h3>
+                        <a href="{{ route('inspections.history') }}" class="text-xs font-bold text-blue-600 hover:text-blue-700">Ver Todos →</a>
                     </div>
                     
                     <div class="p-6">
                         @if($inspections->isEmpty())
                             <div class="text-center py-12">
-                                <p class="text-6xl mb-4">📭</p>
-                                <p class="text-gray-700 text-xl font-bold">Você ainda não enviou nenhuma vistoria.</p>
+                                <p class="text-5xl mb-3 opacity-50">📭</p>
+                                <p class="text-gray-600 font-semibold">Nenhuma vistoria enviada</p>
                             </div>
                         @else
                             <div class="space-y-3">
                                 @foreach($inspections->take(5) as $inspection)
-                                    <div class="p-4 rounded-xl border-2 border-gray-200 hover:border-blue-400 hover:bg-blue-50 transition group cursor-pointer">
+                                    <div class="p-4 rounded-lg border border-gray-200 hover:border-blue-400 hover:bg-blue-50 transition">
                                         <div class="flex items-start justify-between">
                                             <div class="flex-1">
-                                                <p class="font-black text-gray-900 text-lg">
-                                                    🚗 {{ $inspection->vehicle->license_plate }}
-                                                </p>
-                                                <p class="text-sm text-gray-700 font-bold mt-1">
-                                                    <span>{{ $inspection->vehicle->brand }} / {{ $inspection->vehicle->model }}</span> 
-                                                    • <span>{{ $inspection->created_at->format('d/m/Y H:i') }}</span>
-                                                </p>
+                                                <p class="font-bold text-gray-900">🚗 {{ $inspection->vehicle->license_plate }}</p>
+                                                <p class="text-sm text-gray-600 mt-1">{{ $inspection->vehicle->brand }} / {{ $inspection->vehicle->model }}</p>
+                                                <p class="text-xs text-gray-500 mt-1">{{ $inspection->created_at->format('d/m/Y H:i') }}</p>
                                             </div>
-                                            <div class="text-right">
+                                            <div>
                                                 @if($inspection->status === 'approved')
-                                                    <span class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-black">✅ Aprovado</span>
+                                                    <span class="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-bold">✅ Aprovado</span>
                                                 @elseif($inspection->status === 'disapproved')
-                                                    <span class="px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm font-black">❌ Reprovado</span>
+                                                    <span class="px-2 py-1 bg-red-100 text-red-700 rounded text-xs font-bold">❌ Reprovado</span>
                                                 @else
-                                                    <span class="px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-sm font-black">⏳ Pendente</span>
+                                                    <span class="px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-xs font-bold">⏳ Pendente</span>
                                                 @endif
                                             </div>
                                         </div>
-                                        @if($inspection->notes)
-                                            <p class="text-sm text-gray-700 font-bold mt-3 border-t-2 border-gray-200 pt-3">
-                                                <strong>📝 Anotações:</strong> {{ Str::limit($inspection->notes, 100) }}
-                                            </p>
-                                        @endif
                                     </div>
                                 @endforeach
                             </div>

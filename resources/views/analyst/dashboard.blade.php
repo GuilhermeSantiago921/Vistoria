@@ -1,71 +1,108 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Dashboard do Analista - Centro de Controle') }}
-        </h2>
+        <div class="flex justify-between items-center">
+            <div>
+                <h2 class="font-black text-4xl text-gray-900">
+                    👨‍💼 Painel do Analista
+                </h2>
+                <p class="text-gray-600 font-semibold mt-2">Centro de controle de inspeções</p>
+            </div>
+        </div>
     </x-slot>
 
-    <div class="py-12">
+    <div class="py-12 bg-white min-h-screen">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div class="space-y-8">
                 
-                {{-- 1. KPI CARDS (Métricas Chave) --}}
+                {{-- MÉTRICAS CHAVE --}}
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
                     
-                    {{-- Total de Vistorias --}}
-                    <div class="bg-white p-6 rounded-lg shadow-lg border-l-4 border-indigo-500">
-                        <p class="text-xs uppercase text-gray-500 font-semibold">{{ __('Total de Laudos') }}</p>
-                        <p class="text-3xl font-extrabold mt-1 text-indigo-600">{{ $totalInspections }}</p>
+                    {{-- Total de Laudos --}}
+                    <div class="group bg-white rounded-2xl shadow-md border border-gray-100 p-6 hover:shadow-lg transition-all">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <p class="text-gray-500 text-sm font-semibold">Total de Laudos</p>
+                                <p class="text-4xl font-black text-indigo-600 mt-2">{{ $totalInspections }}</p>
+                                <p class="text-gray-600 text-sm mt-1">Processados</p>
+                            </div>
+                            <span class="text-5xl">📊</span>
+                        </div>
                     </div>
 
-                    {{-- Pendentes (Ação Imediata) --}}
-                    <div class="bg-white p-6 rounded-lg shadow-lg border-l-4 border-yellow-500">
-                        <p class="text-xs uppercase text-gray-500 font-semibold">{{ __('Pendentes de Análise') }}</p>
-                        <p class="text-3xl font-extrabold mt-1 text-yellow-600">{{ $pendingInspections }}</p>
+                    {{-- Pendentes --}}
+                    <div class="group bg-white rounded-2xl shadow-md border border-gray-100 p-6 hover:shadow-lg transition-all">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <p class="text-gray-500 text-sm font-semibold">Pendentes</p>
+                                <p class="text-4xl font-black text-amber-600 mt-2">{{ $pendingInspections }}</p>
+                                <p class="text-gray-600 text-sm mt-1">Aguardando análise</p>
+                            </div>
+                            <span class="text-5xl">⏳</span>
+                        </div>
                     </div>
 
                     {{-- Aprovados --}}
-                    <div class="bg-white p-6 rounded-lg shadow-lg border-l-4 border-green-500">
-                        <p class="text-xs uppercase text-gray-500 font-semibold">{{ __('Laudos Aprovados') }}</p>
-                        <p class="text-3xl font-extrabold mt-1 text-green-600">{{ $approvedInspections }}</p>
+                    <div class="group bg-white rounded-2xl shadow-md border border-gray-100 p-6 hover:shadow-lg transition-all">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <p class="text-gray-500 text-sm font-semibold">Aprovados</p>
+                                <p class="text-4xl font-black text-green-600 mt-2">{{ $approvedInspections }}</p>
+                                <p class="text-gray-600 text-sm mt-1">Conclusão positiva</p>
+                            </div>
+                            <span class="text-5xl">✅</span>
+                        </div>
                     </div>
 
                     {{-- Reprovados --}}
-                    <div class="bg-white p-6 rounded-lg shadow-lg border-l-4 border-red-500">
-                        <p class="text-xs uppercase text-gray-500 font-semibold">{{ __('Laudos Reprovados') }}</p>
-                        <p class="text-3xl font-extrabold mt-1 text-red-600">{{ $disapprovedInspections }}</p>
+                    <div class="group bg-white rounded-2xl shadow-md border border-gray-100 p-6 hover:shadow-lg transition-all">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <p class="text-gray-500 text-sm font-semibold">Reprovados</p>
+                                <p class="text-4xl font-black text-red-600 mt-2">{{ $disapprovedInspections }}</p>
+                                <p class="text-gray-600 text-sm mt-1">Não conformidade</p>
+                            </div>
+                            <span class="text-5xl">❌</span>
+                        </div>
                     </div>
                 </div>
 
                 
-                {{-- 2. LISTA DE AÇÃO RÁPIDA (Pendentes Recentes) --}}
-                <div class="bg-white overflow-hidden shadow-xl sm:rounded-lg">
-                    <div class="p-6 bg-white border-b border-gray-200">
-                        <h3 class="text-lg font-bold mb-4">{{ __('Ação Imediata: Vistorias Mais Recentes') }}</h3>
-                        
+                {{-- AÇÃO RÁPIDA: PENDENTES RECENTES --}}
+                <div class="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-gray-100 bg-white">
+                        <h3 class="text-lg font-black text-gray-900">🚨 Ação Imediata</h3>
+                    </div>
+                    
+                    <div class="p-6">
                         @if($recentPending->isEmpty())
-                            <p class="text-green-600 font-semibold">Nenhuma vistoria pendente no momento. Ótimo trabalho!</p>
+                            <div class="text-center py-12">
+                                <p class="text-5xl mb-3 opacity-50">✨</p>
+                                <p class="text-gray-600 font-semibold">Nenhuma vistoria pendente</p>
+                                <p class="text-gray-500 text-sm mt-1">Ótimo trabalho! Você está em dia.</p>
+                            </div>
                         @else
-                            <ul class="divide-y divide-gray-200">
+                            <div class="space-y-3">
                                 @foreach($recentPending as $inspection)
-                                    <li class="py-3 flex justify-between items-center">
-                                        <div>
-                                            <p class="text-sm font-medium text-gray-900">
-                                                Placa: {{ $inspection->vehicle->license_plate }} 
-                                                <span class="text-gray-500 text-xs ml-2">({{ $inspection->vehicle->brand }} {{ $inspection->vehicle->model }})</span>
+                                    <div class="p-4 rounded-lg border border-gray-200 hover:border-amber-400 hover:bg-amber-50 transition flex items-start justify-between">
+                                        <div class="flex-1">
+                                            <p class="font-bold text-gray-900">
+                                                🚗 {{ $inspection->vehicle->license_plate }}
+                                                <span class="text-gray-500 text-xs ml-2">{{ $inspection->vehicle->brand }} {{ $inspection->vehicle->model }}</span>
                                             </p>
-                                            <p class="text-xs text-gray-500 mt-1">
-                                                Enviado por: {{ $inspection->vehicle->user->name }} - {{ $inspection->created_at->diffForHumans() }}
+                                            <p class="text-sm text-gray-600 mt-1">
+                                                {{ $inspection->vehicle->user->name }} • {{ $inspection->created_at->diffForHumans() }}
                                             </p>
                                         </div>
-                                        <a href="{{ route('analyst.inspections.show', $inspection) }}" class="text-white bg-indigo-500 hover:bg-indigo-600 text-xs font-bold py-1 px-3 rounded-full">
+                                        <a href="{{ route('analyst.inspections.show', $inspection) }}" class="ml-4 px-3 py-1 bg-indigo-600 text-white rounded text-xs font-bold hover:bg-indigo-700 transition whitespace-nowrap">
                                             Analisar
                                         </a>
-                                    </li>
+                                    </div>
                                 @endforeach
-                            </ul>
-                            <div class="mt-4 text-right">
-                                <a href="{{ route('analyst.inspections.all') }}" class="text-blue-500 hover:underline text-sm font-medium">Ver todas as {{ $pendingInspections }} Vistorias Pendentes →</a>
+                            </div>
+                            <div class="mt-4 text-center">
+                                <a href="{{ route('analyst.inspections.all') }}" class="text-blue-600 hover:text-blue-700 text-sm font-semibold">
+                                    Ver todas as {{ $pendingInspections }} pendentes →
+                                </a>
                             </div>
                         @endif
                     </div>
