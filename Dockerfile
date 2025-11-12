@@ -22,6 +22,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     unixodbc-dev \
     libsqlite3-dev \
     default-libmysqlclient-dev \
+    # dependências para a extensão GD
+    libfreetype6-dev \
+    libjpeg62-turbo-dev \
+    libpng-dev \
+    libwebp-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Adiciona chave Microsoft de forma não-depreciada e repositório (usa signed-by)
@@ -44,8 +49,12 @@ RUN pecl install sqlsrv pdo_sqlsrv \
 # Instala e compila pdo_mysql (usa as headers instaladas acima)
 RUN docker-php-ext-install pdo_mysql
 
+# Configura e instala a extensão GD (necessária para dompdf)
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
+ && docker-php-ext-install -j"$(nproc)" gd
+
 # Limpeza: remover apenas pacotes de build; garantir que runtime ODBC permaneça
-RUN apt-get purge -y build-essential autoconf pkg-config make g++ default-libmysqlclient-dev \
+RUN apt-get purge -y build-essential autoconf pkg-config make g++ default-libmysqlclient-dev libfreetype6-dev libjpeg62-turbo-dev libpng-dev libwebp-dev \
  && apt-get update \
  && apt-get install -y --no-install-recommends unixodbc libodbc1 odbcinst \
  && rm -rf /var/lib/apt/lists/*
