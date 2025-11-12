@@ -40,15 +40,15 @@
                     </div>
 
                     {{-- Card 3: Criar Novo Usuário --}}
-                    <a href="{{ route('admin.users.create') }}" class="group bg-gradient-to-br from-green-500 to-green-600 rounded-3xl shadow-lg border border-green-300 p-8 hover:shadow-2xl transition-all hover:-translate-y-1 text-white">
+                    <a href="{{ route('admin.users.create') }}" class="group bg-white rounded-3xl shadow-lg border border-gray-200 p-8 hover:shadow-2xl transition-all hover:-translate-y-1">
                         <div class="flex items-center justify-between mb-4">
                             <div>
-                                <p class="text-sm font-bold uppercase tracking-wider opacity-90">Nova Ação</p>
-                                <p class="text-3xl font-black mt-3">Adicionar Usuário</p>
+                                <p class="text-sm text-gray-500 font-bold uppercase tracking-wider">Nova Ação</p>
+                                <p class="text-5xl font-black text-green-600 mt-3">Adicionar</p>
                             </div>
                             <span class="text-6xl group-hover:scale-110 transition">➕</span>
                         </div>
-                        <p class="opacity-90 font-semibold">Criar novo usuário no sistema</p>
+                        <p class="text-gray-600 font-semibold">Criar novo usuário no sistema</p>
                     </a>
                 </div>
 
