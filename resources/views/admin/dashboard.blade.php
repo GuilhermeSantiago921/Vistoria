@@ -5,77 +5,75 @@
                 <h2 class="font-black text-4xl text-gray-900">
                     ⚙️ Painel de Administrador
                 </h2>
-                <p class="text-gray-600 font-bold mt-2">Gerencie usuários, inspetores e inspeções</p>
+                <p class="text-gray-600 font-semibold mt-2">Gerencie o sistema com facilidade</p>
             </div>
         </div>
     </x-slot>
 
-    <div class="py-12 bg-gray-50 min-h-screen">
+    <div class="py-12 bg-white min-h-screen">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div class="space-y-8">
                 {{-- CARDS DE RESUMO --}}
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {{-- Card 1: Total de Usuários --}}
-                    <div class="group bg-white rounded-3xl shadow-lg border border-gray-200 p-8 hover:shadow-2xl transition-all hover:-translate-y-1">
-                        <div class="flex items-center justify-between mb-4">
-                            <div>
-                                <p class="text-sm text-gray-500 font-bold uppercase tracking-wider">Total de Usuários</p>
-                                <p class="text-5xl font-black text-blue-600 mt-3">{{ $user_count }}</p>
+                    <div class="group bg-white rounded-2xl shadow-md border border-gray-100 p-6 hover:shadow-lg transition-all">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <p class="text-gray-500 text-sm font-semibold">Total de Usuários</p>
+                                <p class="text-4xl font-black text-blue-600 mt-2">{{ $user_count }}</p>
+                                <p class="text-gray-600 text-sm mt-1">Usuários ativos</p>
                             </div>
-                            <span class="text-6xl group-hover:scale-110 transition">👥</span>
+                            <span class="text-5xl">👥</span>
                         </div>
-                        <p class="text-gray-600 font-semibold">Usuários registrados no sistema</p>
                     </div>
 
                     {{-- Card 2: Total de Analistas --}}
-                    <div class="group bg-white rounded-3xl shadow-lg border border-gray-200 p-8 hover:shadow-2xl transition-all hover:-translate-y-1">
-                        <div class="flex items-center justify-between mb-4">
-                            <div>
-                                <p class="text-sm text-gray-500 font-bold uppercase tracking-wider">Analistas</p>
-                                <p class="text-5xl font-black text-purple-600 mt-3">{{ $analyst_count }}</p>
+                    <div class="group bg-white rounded-2xl shadow-md border border-gray-100 p-6 hover:shadow-lg transition-all">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <p class="text-gray-500 text-sm font-semibold">Total de Analistas</p>
+                                <p class="text-4xl font-black text-purple-600 mt-2">{{ $analyst_count }}</p>
+                                <p class="text-gray-600 text-sm mt-1">Profissionais</p>
                             </div>
-                            <span class="text-6xl group-hover:scale-110 transition">👨‍💼</span>
+                            <span class="text-5xl">👨‍💼</span>
                         </div>
-                        <p class="text-gray-600 font-semibold">Profissionais registrados</p>
                     </div>
 
-                    {{-- Card 3: Criar Novo Usuário --}}
-                    <a href="{{ route('admin.users.create') }}" class="group bg-white rounded-3xl shadow-lg border border-gray-200 p-8 hover:shadow-2xl transition-all hover:-translate-y-1">
-                        <div class="flex items-center justify-between mb-4">
-                            <div>
-                                <p class="text-sm text-gray-500 font-bold uppercase tracking-wider">Nova Ação</p>
-                                <p class="text-5xl font-black text-green-600 mt-3">Adicionar</p>
+                    {{-- Card 3: Ações Rápidas --}}
+                    <a href="{{ route('admin.users.create') }}" class="group bg-blue-50 rounded-2xl shadow-md border border-blue-200 p-6 hover:shadow-lg transition-all hover:bg-blue-100">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <p class="text-blue-700 text-sm font-semibold">Ações Rápidas</p>
+                                <p class="text-3xl font-black text-blue-600 mt-2">➕</p>
+                                <p class="text-blue-600 text-sm mt-1 font-medium">Criar usuário</p>
                             </div>
-                            <span class="text-6xl group-hover:scale-110 transition">➕</span>
+                            <span class="text-4xl opacity-30">→</span>
                         </div>
-                        <p class="text-gray-600 font-semibold">Criar novo usuário no sistema</p>
                     </a>
                 </div>
 
                 {{-- FILTROS AVANÇADOS --}}
-                <div class="bg-white rounded-3xl shadow-lg border border-gray-200 p-8">
-                    <h3 class="text-2xl font-black text-gray-900 mb-6 flex items-center gap-3">
-                        🔍 Filtros Avançados
-                    </h3>
-                    <form method="GET" action="{{ route('admin.dashboard') }}" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="bg-white rounded-2xl shadow-md border border-gray-100 p-6">
+                    <h3 class="text-lg font-black text-gray-900 mb-4">🔍 Filtrar Resultados</h3>
+                    <form method="GET" action="{{ route('admin.dashboard') }}" class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         
                         <div>
-                            <label for="plate" class="block text-sm font-bold text-gray-700 mb-3 uppercase tracking-wider">Buscar por Placa</label>
-                            <input id="plate" name="plate" type="text" value="{{ request('plate') }}" placeholder="Ex: ABC1234" class="w-full px-5 py-3 rounded-2xl border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition font-semibold text-gray-900" />
+                            <label for="plate" class="block text-xs font-bold text-gray-700 mb-2 uppercase tracking-wider">Placa</label>
+                            <input id="plate" name="plate" type="text" value="{{ request('plate') }}" placeholder="ABC1234" class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition text-sm" />
                         </div>
                         
                         <div>
-                            <label for="date" class="block text-sm font-bold text-gray-700 mb-3 uppercase tracking-wider">Filtrar por Data</label>
-                            <input id="date" name="date" type="date" value="{{ request('date') }}" class="w-full px-5 py-3 rounded-2xl border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition font-semibold text-gray-900" />
+                            <label for="date" class="block text-xs font-bold text-gray-700 mb-2 uppercase tracking-wider">Data</label>
+                            <input id="date" name="date" type="date" value="{{ request('date') }}" class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition text-sm" />
                         </div>
 
-                        <div class="flex items-end gap-3">
-                            <button type="submit" class="flex-1 px-6 py-3 bg-blue-600 text-white rounded-2xl hover:bg-blue-700 transition font-bold text-lg shadow-md hover:shadow-lg">
-                                🔎 Buscar
+                        <div class="flex items-end gap-2">
+                            <button type="submit" class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-bold text-sm">
+                                Buscar
                             </button>
                             @if(request()->filled('plate') || request()->filled('date'))
-                                <a href="{{ route('admin.dashboard') }}" class="px-6 py-3 bg-gray-200 text-gray-700 rounded-2xl hover:bg-gray-300 transition font-bold text-lg shadow-md hover:shadow-lg">
-                                    ✕ Limpar
+                                <a href="{{ route('admin.dashboard') }}" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-bold text-sm">
+                                    Limpar
                                 </a>
                             @endif
                         </div>
@@ -83,59 +81,57 @@
                 </div>
 
                 {{-- TABELA DE RESULTADOS --}}
-                <div class="bg-white rounded-3xl shadow-lg border border-gray-200 overflow-hidden">
-                    <div class="px-8 py-6 border-b border-gray-200 bg-gray-50">
-                        <h3 class="text-2xl font-black text-gray-900">📋 Resultados da Busca</h3>
-                        <p class="text-gray-600 font-semibold mt-2">Todos os laudos no sistema</p>
+                <div class="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-gray-100 bg-white">
+                        <h3 class="text-lg font-black text-gray-900">📋 Laudos</h3>
                     </div>
                     
-                    <div class="p-8">
+                    <div class="p-6">
                         @if($inspections->isEmpty())
-                            <div class="text-center py-16">
-                                <p class="text-7xl mb-4">📭</p>
-                                <p class="text-gray-700 text-2xl font-black">Nenhum laudo encontrado</p>
-                                <p class="text-gray-600 font-semibold mt-2">Tente ajustar seus critérios de busca</p>
+                            <div class="text-center py-12">
+                                <p class="text-5xl mb-3 opacity-50">📭</p>
+                                <p class="text-gray-600 font-semibold">Nenhum laudo encontrado</p>
                             </div>
                         @else
                             <div class="overflow-x-auto">
-                                <table class="w-full">
+                                <table class="w-full text-sm">
                                     <thead>
-                                        <tr class="border-b border-gray-200 bg-gray-50">
-                                            <th class="px-6 py-4 text-left text-xs font-black text-gray-900 uppercase tracking-wider">ID</th>
-                                            <th class="px-6 py-4 text-left text-xs font-black text-gray-900 uppercase tracking-wider">Placa</th>
-                                            <th class="px-6 py-4 text-left text-xs font-black text-gray-900 uppercase tracking-wider">Cliente</th>
-                                            <th class="px-6 py-4 text-left text-xs font-black text-gray-900 uppercase tracking-wider">Status</th>
-                                            <th class="px-6 py-4 text-left text-xs font-black text-gray-900 uppercase tracking-wider">Data</th>
-                                            <th class="px-6 py-4 text-left text-xs font-black text-gray-900 uppercase tracking-wider">Ação</th>
+                                        <tr class="border-b border-gray-200">
+                                            <th class="px-4 py-3 text-left font-bold text-gray-700 text-xs">ID</th>
+                                            <th class="px-4 py-3 text-left font-bold text-gray-700 text-xs">Placa</th>
+                                            <th class="px-4 py-3 text-left font-bold text-gray-700 text-xs">Cliente</th>
+                                            <th class="px-4 py-3 text-left font-bold text-gray-700 text-xs">Status</th>
+                                            <th class="px-4 py-3 text-left font-bold text-gray-700 text-xs">Data</th>
+                                            <th class="px-4 py-3 text-left font-bold text-gray-700 text-xs">Ação</th>
                                         </tr>
                                     </thead>
                                     <tbody class="divide-y divide-gray-200">
                                         @foreach($inspections as $inspection)
                                             <tr class="hover:bg-gray-50 transition">
-                                                <td class="px-6 py-4 whitespace-nowrap">
-                                                    <span class="text-sm font-bold text-gray-900 bg-gray-100 px-4 py-2 rounded-full">#{{ $inspection->id }}</span>
+                                                <td class="px-4 py-3">
+                                                    <span class="text-xs font-bold text-gray-500">#{{ $inspection->id }}</span>
                                                 </td>
-                                                <td class="px-6 py-4 whitespace-nowrap">
-                                                    <span class="font-black text-gray-900 text-lg">{{ $inspection->vehicle->license_plate }}</span>
+                                                <td class="px-4 py-3">
+                                                    <span class="font-bold text-gray-900">{{ $inspection->vehicle->license_plate }}</span>
                                                 </td>
-                                                <td class="px-6 py-4 whitespace-nowrap text-gray-700 font-semibold">
+                                                <td class="px-4 py-3 text-gray-700 text-sm">
                                                     {{ $inspection->vehicle->user->name }}
                                                 </td>
-                                                <td class="px-6 py-4 whitespace-nowrap">
+                                                <td class="px-4 py-3">
                                                     @if($inspection->status === 'approved')
-                                                        <span class="px-4 py-2 bg-green-100 text-green-800 rounded-full text-xs font-bold border border-green-300">✅ Aprovado</span>
+                                                        <span class="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-bold">✅ Aprovado</span>
                                                     @elseif($inspection->status === 'disapproved')
-                                                        <span class="px-4 py-2 bg-red-100 text-red-800 rounded-full text-xs font-bold border border-red-300">❌ Reprovado</span>
+                                                        <span class="px-2 py-1 bg-red-100 text-red-700 rounded text-xs font-bold">❌ Reprovado</span>
                                                     @else
-                                                        <span class="px-4 py-2 bg-amber-100 text-amber-800 rounded-full text-xs font-bold border border-amber-300">⏳ Pendente</span>
+                                                        <span class="px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-xs font-bold">⏳ Pendente</span>
                                                     @endif
                                                 </td>
-                                                <td class="px-6 py-4 whitespace-nowrap text-gray-700 font-semibold">
-                                                    {{ $inspection->created_at->format('d/m/Y H:i') }}
+                                                <td class="px-4 py-3 text-gray-700 text-sm">
+                                                    {{ $inspection->created_at->format('d/m/Y') }}
                                                 </td>
-                                                <td class="px-6 py-4 whitespace-nowrap">
-                                                    <a href="{{ route('analyst.inspections.show', $inspection) }}" class="px-5 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition text-xs font-bold shadow-md hover:shadow-lg inline-block">
-                                                        Ver Detalhes →
+                                                <td class="px-4 py-3">
+                                                    <a href="{{ route('analyst.inspections.show', $inspection) }}" class="px-3 py-1 bg-blue-600 text-white rounded text-xs font-bold hover:bg-blue-700 transition inline-block">
+                                                        Ver
                                                     </a>
                                                 </td>
                                             </tr>
