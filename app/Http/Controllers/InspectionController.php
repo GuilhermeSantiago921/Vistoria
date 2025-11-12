@@ -55,7 +55,7 @@ class InspectionController extends Controller
             // Lógica de busca externa (Query atualizada para incluir Renavam, Cilindradas, etc.)
             $query = "
                 SELECT TOP 1
-                    A.NR_Chassi, A.NR_Motor, A.NR_Cambio, A.NR_AnoFabricacao, A.NR_AnoModelo, C.NM_MarcaModelo,
+                    A.NR_Chassi, A.NR_Motor, A.NR_AnoFabricacao, A.NR_AnoModelo, C.NM_MarcaModelo,
                     I.NM_CorVeiculo, D.NM_Combustivel,
                     A.NR_Renavam, A.NR_Cilindradas, A.NR_PesoBrutoTotal
                 FROM VeiculosAgregados.dbo.Agregados2020 A
@@ -85,7 +85,6 @@ class InspectionController extends Controller
             if ($dados_agregados) {
                 $vehicleData['vin'] = $dados_agregados['NR_Chassi'] ?? null;
                 $vehicleData['engine_number'] = $dados_agregados['NR_Motor'] ?? null;
-                $vehicleData['gearbox_number'] = $dados_agregados['NR_Cambio'] ?? null;
                 $vehicleData['brand'] = $dados_agregados['NM_MarcaModelo'] ?? null;
                 $vehicleData['model'] = $dados_agregados['NM_MarcaModelo'] ?? null;
                 $vehicleData['color'] = $dados_agregados['NM_CorVeiculo'] ?? null;
@@ -100,7 +99,6 @@ class InspectionController extends Controller
                 'year' => $vehicleData['year'] ?? 0,
                 'vin' => $vehicleData['vin'] ?? null,
                 'engine_number' => $vehicleData['engine_number'] ?? null,
-                'gearbox_number' => $vehicleData['gearbox_number'] ?? null,
                 'color' => $vehicleData['color'] ?? null,
                 'fuel_type' => $vehicleData['fuel_type'] ?? null,
             ];
@@ -279,7 +277,7 @@ class InspectionController extends Controller
             // Consulta reduzida e segura (somente colunas que existem na tabela)
             $query = "
                 SELECT TOP 1
-                    A.NR_Chassi, A.NR_Motor, A.NR_Cambio, A.NR_AnoFabricacao, A.NR_AnoModelo,
+                    A.NR_Chassi, A.NR_Motor, A.NR_AnoFabricacao, A.NR_AnoModelo,
                     C.NM_MarcaModelo,
                     I.NM_CorVeiculo,
                     D.NM_Combustivel
@@ -301,7 +299,6 @@ class InspectionController extends Controller
                 $vehicleData = [
                     'vin' => $dados['NR_Chassi'] ?? null,
                     'engine_number' => $dados['NR_Motor'] ?? null,
-                    'gearbox_number' => $dados['NR_Cambio'] ?? null,
                     'brand' => $dados['NM_MarcaModelo'] ?? $inspection->vehicle->brand,
                     'model' => $dados['NM_MarcaModelo'] ?? $inspection->vehicle->model,
                     'color' => $dados['NM_CorVeiculo'] ?? $inspection->vehicle->color,
