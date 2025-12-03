@@ -1,0 +1,135 @@
+version: '3.8'
+
+services:
+  # Laravel Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vistoria-app
+    restart: unless-stopped
+    working_dir: /app
+    environment:
+      - APP_ENV=local
+      - APP_DEBUG=true
+      - APP_URL=http://localhost:8000
+      - DB_CONNECTION=mysql
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_DATABASE=${DB_DATABASE:-vistoria}
+      - DB_USERNAME=${DB_USERNAME:-vistoria}
+      - DB_PASSWORD=${DB_PASSWORD:-vistoria_pass}
+      - CACHE_STORE=redis
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - QUEUE_CONNECTION=redis
+      - SESSION_DRIVER=redis
+      - REDIS_CACHE_DB=1
+      - REDIS_SESSION_DB=2
+      - REDIS_QUEUE_DB=3
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    networks:
+      - vistoria
+    depends_on:
+      - mysql
+      - redis
+    command: >
+      sh -c "composer install &&
+             php artisan migrate:fresh --seed &&
+             php artisan serve --host=0.0.0.0 --port=8000"
+
+  # MySQL Database
+  mysql:
+    image: mysql:8.0
+    container_name: vistoria-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE:-vistoria}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root_pass}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-vistoria_pass}
+      MYSQL_USER: ${DB_USERNAME:-vistoria}
+      MYSQL_ALLOW_EMPTY_PASSWORD: "false"
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database_setup.sql:/docker-entrypoint-initdb.d/01-setup.sql
+    networks:
+      - vistoria
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: vistoria-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - vistoria
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      timeout: 10s
+      retries: 5
+
+  # phpMyAdmin (Gerenciamento do MySQL)
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: vistoria-phpmyadmin
+    restart: unless-stopped
+    environment:
+      PMA_HOST: mysql
+      PMA_USER: ${DB_USERNAME:-vistoria}
+      PMA_PASSWORD: ${DB_PASSWORD:-vistoria_pass}
+      PMA_PORT: 3306
+    ports:
+      - "8080:80"
+    networks:
+      - vistoria
+    depends_on:
+      - mysql
+
+  # Redis Commander (Gerenciamento do Redis)
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: vistoria-redis-commander
+    restart: unless-stopped
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - "8081:8081"
+    networks:
+      - vistoria
+    depends_on:
+      - redis
+
+  # Mailhog (Teste de Emails)
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: vistoria-mailhog
+    restart: unless-stopped
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    networks:
+      - vistoria
+
+volumes:
+  mysql_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  vistoria:
+    driver: bridge
