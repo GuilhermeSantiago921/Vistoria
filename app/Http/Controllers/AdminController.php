@@ -105,4 +105,119 @@ class AdminController extends Controller
         
         return view('admin.users.show', compact('user'));
     }
+
+    /**
+     * Exibe o formulário para gerenciar créditos dos clientes.
+     *
+     * @return \Illuminate\View\View
+     */
+    public function manageCredits()
+    {
+        $clients = User::where('role', 'client')
+                      ->orderBy('name')
+                      ->get();
+
+        return view('admin.credits.manage', compact('clients'));
+    }
+
+    /**
+     * Adiciona créditos para um cliente específico.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function addCredits(Request $request)
+    {
+        $request->validate([
+            'user_id' => 'required|exists:users,id',
+            'credits' => 'required|integer|min:1|max:100',
+            'reason' => 'nullable|string|max:255'
+        ]);
+
+        $user = User::findOrFail($request->user_id);
+        
+        // Verifica se é um cliente
+        if ($user->role !== 'client') {
+            return back()->with('error', 'Créditos só podem ser adicionados para clientes.');
+        }
+
+        $previousCredits = $user->inspection_credits;
+        $user->inspection_credits += $request->credits;
+        $user->save();
+
+        // Log da operação para auditoria
+        \Log::info('Créditos adicionados pelo admin', [
+            'admin_id' => auth()->id(),
+            'admin_name' => auth()->user()->name,
+            'client_id' => $user->id,
+            'client_name' => $user->name,
+            'credits_added' => $request->credits,
+            'previous_credits' => $previousCredits,
+            'new_credits' => $user->inspection_credits,
+            'reason' => $request->reason
+        ]);
+
+        $addedValue = User::formatMoney($request->credits * config('inspection.credit_price'));
+        $totalValue = $user->getFormattedCreditsValue();
+        
+        return back()->with('success', "✅ {$request->credits} créditos ({$addedValue}) adicionados para {$user->name}. Total atual: {$user->inspection_credits} créditos ({$totalValue}).");
+    }
+
+    /**
+     * Define créditos para um cliente específico (substitui o valor atual).
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function setCredits(Request $request)
+    {
+        $request->validate([
+            'user_id' => 'required|exists:users,id',
+            'credits' => 'required|integer|min:0|max:1000',
+            'reason' => 'nullable|string|max:255'
+        ]);
+
+        $user = User::findOrFail($request->user_id);
+        
+        // Verifica se é um cliente
+        if ($user->role !== 'client') {
+            return back()->with('error', 'Créditos só podem ser definidos para clientes.');
+        }
+
+        $previousCredits = $user->inspection_credits;
+        $user->inspection_credits = $request->credits;
+        $user->save();
+
+        // Log da operação para auditoria
+        \Log::info('Créditos definidos pelo admin', [
+            'admin_id' => auth()->id(),
+            'admin_name' => auth()->user()->name,
+            'client_id' => $user->id,
+            'client_name' => $user->name,
+            'previous_credits' => $previousCredits,
+            'new_credits' => $user->inspection_credits,
+            'reason' => $request->reason
+        ]);
+
+        $totalValue = $user->getFormattedCreditsValue();
+        
+        return back()->with('success', "✅ Créditos de {$user->name} definidos para {$request->credits} ({$totalValue}).");
+    }
+
+    /**
+     * Exibe o histórico de créditos e transações dos clientes.
+     *
+     * @return \Illuminate\View\View
+     */
+    public function creditsHistory()
+    {
+        $clients = User::where('role', 'client')
+                      ->with(['vehicles.inspections' => function($query) {
+                          $query->orderBy('created_at', 'desc');
+                      }])
+                      ->orderBy('name')
+                      ->get();
+
+        return view('admin.credits.history', compact('clients'));
+    }
 }

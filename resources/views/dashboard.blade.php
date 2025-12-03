@@ -25,12 +25,18 @@
                         <div class="flex items-start justify-between">
                             <div class="flex-1">
                                 <p class="text-gray-500 text-sm font-semibold">Créditos Disponíveis</p>
-                                <p class="text-4xl font-black text-blue-600 mt-2">{{ Auth::user()->inspection_credits ?? 0 }}</p>
-                                <p class="text-gray-600 text-sm mt-1">
+                                <div class="flex items-baseline space-x-2 mt-2">
+                                    <p class="text-4xl font-black text-blue-600">{{ Auth::user()->inspection_credits ?? 0 }}</p>
+                                    <p class="text-lg font-semibold text-gray-500">créditos</p>
+                                </div>
+                                <p class="text-green-600 font-semibold text-sm">
+                                    {{ Auth::user()->getFormattedCreditsValue() }}
+                                </p>
+                                <p class="text-gray-600 text-xs mt-1">
                                     @if (Auth::user()->inspection_credits > 0)
-                                        ✅ Pronto para enviar
+                                        ✅ Pronto para enviar • R$ {{ number_format(config('inspection.credit_price'), 2, ',', '.') }} por vistoria
                                     @else
-                                        ❌ Adquira créditos
+                                        ❌ Adquira créditos • R$ {{ number_format(config('inspection.credit_price'), 2, ',', '.') }} por vistoria
                                     @endif
                                 </p>
                             </div>
@@ -114,6 +120,29 @@
                                 @endforeach
                             </div>
                         @endif
+                    </div>
+                </div>
+
+                {{-- INFORMAÇÕES DE PREÇO --}}
+                <div class="bg-gradient-to-r from-blue-50 to-blue-100 rounded-2xl shadow-md border border-blue-200 p-6 mt-8">
+                    <div class="text-center">
+                        <h3 class="text-lg font-black text-blue-900 mb-2">💰 Informações de Preço</h3>
+                        <div class="flex items-center justify-center space-x-8">
+                            <div class="text-center">
+                                <p class="text-3xl font-black text-blue-600">{{ \App\Models\User::formatMoney(config('inspection.credit_price')) }}</p>
+                                <p class="text-sm text-blue-800 font-semibold">por vistoria</p>
+                            </div>
+                            <div class="text-blue-400">•</div>
+                            <div class="text-center">
+                                <p class="text-lg font-semibold text-blue-800">1 crédito = 1 vistoria</p>
+                                <p class="text-sm text-blue-600">Sistema pré-pago</p>
+                            </div>
+                            <div class="text-blue-400">•</div>
+                            <div class="text-center">
+                                <p class="text-lg font-semibold text-blue-800">Pagamento seguro</p>
+                                <p class="text-sm text-blue-600">PIX, cartão ou boleto</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
 

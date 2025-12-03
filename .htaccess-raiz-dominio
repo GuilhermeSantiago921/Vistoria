@@ -1,0 +1,7 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    
+    # Redirecionar todo tráfego para vistoria/public
+    RewriteCond %{REQUEST_URI} !^/vistoria/public/
+    RewriteRule ^(.*)$ /vistoria/public/$1 [L,QSA]
+</IfModule>

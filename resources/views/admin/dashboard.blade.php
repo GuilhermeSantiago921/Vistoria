@@ -14,7 +14,7 @@
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div class="space-y-8">
                 {{-- CARDS DE RESUMO --}}
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
                     {{-- Card 1: Total de Usuários --}}
                     <div class="group bg-white rounded-2xl shadow-md border border-gray-100 p-6 hover:shadow-lg transition-all">
                         <div class="flex items-start justify-between">
@@ -39,7 +39,19 @@
                         </div>
                     </div>
 
-                    {{-- Card 3: Ações Rápidas --}}
+                    {{-- Card 3: Gerenciar Créditos --}}
+                    <a href="{{ route('admin.credits.manage') }}" class="group bg-green-50 rounded-2xl shadow-md border border-green-200 p-6 hover:shadow-lg transition-all hover:bg-green-100">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <p class="text-green-700 text-sm font-semibold">Gerenciar Créditos</p>
+                                <p class="text-3xl font-black text-green-600 mt-2">💳</p>
+                                <p class="text-green-600 text-sm mt-1 font-medium">Controle de créditos</p>
+                            </div>
+                            <span class="text-4xl opacity-30">→</span>
+                        </div>
+                    </a>
+
+                    {{-- Card 4: Criar Usuário --}}
                     <a href="{{ route('admin.users.create') }}" class="group bg-blue-50 rounded-2xl shadow-md border border-blue-200 p-6 hover:shadow-lg transition-all hover:bg-blue-100">
                         <div class="flex items-start justify-between">
                             <div class="flex-1">
@@ -50,6 +62,29 @@
                             <span class="text-4xl opacity-30">→</span>
                         </div>
                     </a>
+                </div>
+
+                {{-- NAVEGAÇÃO RÁPIDA --}}
+                <div class="bg-white rounded-2xl shadow-md border border-gray-100 p-6">
+                    <h3 class="text-lg font-black text-gray-900 mb-4">🚀 Navegação Rápida</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <a href="{{ route('admin.users.index') }}" class="flex items-center space-x-3 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition">
+                            <span class="text-2xl">👥</span>
+                            <span class="text-sm font-semibold text-gray-700">Ver Usuários</span>
+                        </a>
+                        <a href="{{ route('admin.credits.manage') }}" class="flex items-center space-x-3 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition">
+                            <span class="text-2xl">💳</span>
+                            <span class="text-sm font-semibold text-gray-700">Gerenciar Créditos</span>
+                        </a>
+                        <a href="{{ route('admin.credits.history') }}" class="flex items-center space-x-3 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition">
+                            <span class="text-2xl">📋</span>
+                            <span class="text-sm font-semibold text-gray-700">Histó. Créditos</span>
+                        </a>
+                        <a href="{{ route('analyst.dashboard') }}" class="flex items-center space-x-3 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition">
+                            <span class="text-2xl">🔍</span>
+                            <span class="text-sm font-semibold text-gray-700">Painel Analista</span>
+                        </a>
+                    </div>
                 </div>
 
                 {{-- FILTROS AVANÇADOS --}}

@@ -45,11 +45,17 @@
             @endisset
 
             <!-- Page Content -->
-            <main class="py-8">
+            <main class="py-8 content-with-bottom-nav">
                 <div class="animate-slide-in">
                     {{ $slot }}
                 </div>
             </main>
         </div>
+        
+        <!-- Bottom Navigation Mobile -->
+        <x-bottom-nav />
+        
+        <!-- Toast Notifications -->
+        <x-toast />
     </body>
 </html>

@@ -1,0 +1,20 @@
+<?php
+
+use Illuminate\Contracts\Http\Kernel;
+use Illuminate\Http\Request;
+
+define('LARAVEL_START', microtime(true));
+
+// Ajuste o caminho para o arquivo de autoload (específico para grupoautocredcar.com.br)
+require __DIR__.'/../../sistema-vistoria/vendor/autoload.php';
+
+// Ajuste o caminho para o bootstrap (específico para grupoautocredcar.com.br)
+$app = require_once __DIR__.'/../../sistema-vistoria/bootstrap/app.php';
+
+$kernel = $app->make(Kernel::class);
+
+$response = $kernel->handle(
+    $request = Request::capture()
+)->send();
+
+$kernel->terminate($request, $response);

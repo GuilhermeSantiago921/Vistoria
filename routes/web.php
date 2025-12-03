@@ -90,4 +90,10 @@ Route::middleware(['auth', AdminMiddleware::class])->prefix('admin')->group(func
     Route::get('/users/create', [AdminController::class, 'createUser'])->name('admin.users.create');
     Route::post('/users', [AdminController::class, 'storeUser'])->name('admin.users.store');
     Route::get('/users/{user}', [AdminController::class, 'showUser'])->name('admin.users.show');
+    
+    // Gerência de Créditos
+    Route::get('/credits/manage', [AdminController::class, 'manageCredits'])->name('admin.credits.manage');
+    Route::post('/credits/add', [AdminController::class, 'addCredits'])->name('admin.credits.add');
+    Route::post('/credits/set', [AdminController::class, 'setCredits'])->name('admin.credits.set');
+    Route::get('/credits/history', [AdminController::class, 'creditsHistory'])->name('admin.credits.history');
 });

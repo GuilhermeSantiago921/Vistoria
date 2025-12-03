@@ -23,6 +23,7 @@ class User extends Authenticatable
         'email',
         'password',
         'role', // Correção anterior mantida
+        'inspection_credits',
     ];
 
     /**
@@ -56,5 +57,73 @@ class User extends Authenticatable
     {
         // Assume que a chave estrangeira na tabela 'vehicles' é 'user_id'
         return $this->hasMany(Vehicle::class, 'user_id');
+    }
+
+    /**
+     * Verifica se o usuário tem créditos suficientes para uma nova vistoria.
+     */
+    public function hasCredits(): bool
+    {
+        return $this->inspection_credits > 0;
+    }
+
+    /**
+     * Consome um crédito de vistoria.
+     */
+    public function consumeCredit(): bool
+    {
+        if ($this->hasCredits()) {
+            $this->decrement('inspection_credits');
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Adiciona créditos de vistoria.
+     */
+    public function addCredits(int $amount): void
+    {
+        $this->increment('inspection_credits', $amount);
+    }
+
+    /**
+     * Define o total de créditos de vistoria.
+     */
+    public function setCredits(int $amount): void
+    {
+        $this->update(['inspection_credits' => $amount]);
+    }
+
+    /**
+     * Retorna o valor total em reais dos créditos do usuário.
+     */
+    public function getCreditsValue(): float
+    {
+        return $this->inspection_credits * config('inspection.credit_price');
+    }
+
+    /**
+     * Retorna o valor formatado em reais dos créditos do usuário.
+     */
+    public function getFormattedCreditsValue(): string
+    {
+        return 'R$ ' . number_format($this->getCreditsValue(), 2, ',', '.');
+    }
+
+    /**
+     * Calcula o valor de uma quantidade específica de créditos.
+     */
+    public static function calculateCreditsValue(int $credits): float
+    {
+        return $credits * config('inspection.credit_price');
+    }
+
+    /**
+     * Formata um valor monetário para o padrão brasileiro.
+     */
+    public static function formatMoney(float $value): string
+    {
+        return 'R$ ' . number_format($value, 2, ',', '.');
     }
 }

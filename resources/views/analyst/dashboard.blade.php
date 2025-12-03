@@ -3,7 +3,7 @@
         <div class="flex justify-between items-center">
             <div>
                 <h2 class="font-black text-4xl text-gray-900">
-                    👨‍💼 Painel do Analista
+                    � Painel do Mesário
                 </h2>
                 <p class="text-gray-600 font-semibold mt-2">Centro de controle de inspeções</p>
             </div>

@@ -32,10 +32,10 @@
                             📋 Meus Laudos
                         </a>
                     
-                    {{-- Links CONDICIONAIS para ANALISTA --}}
+                    {{-- Links CONDICIONAIS para MESÁRIO --}}
                     @elseif (Auth::check() && Auth::user()->role === 'analyst')
                         <a href="{{ route('analyst.dashboard') }}" class="px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-600 transition {{ request()->routeIs('analyst.dashboard') ? 'bg-blue-600' : '' }}">
-                            👨‍💼 Analista
+                            � Mesário
                         </a>
                         <a href="{{ route('analyst.inspections.all') }}" class="px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-600 transition {{ request()->routeIs('analyst.inspections.all') ? 'bg-blue-600' : '' }}">
                             🔍 Todas Vistorias
@@ -57,13 +57,13 @@
                         </x-slot>
 
                         <x-slot name="content">
-                            <a href="{{ route('profile.edit') }}" class="block px-4 py-2 text-sm text-gray-800 hover:bg-blue-100 transition font-semibold">
+                            <a href="{{ route('profile.edit') }}" class="block px-4 py-2 text-sm text-gray-900 hover:bg-blue-100 transition font-bold">
                                 ⚡ Meu Perfil
                             </a>
 
                             <form method="POST" action="{{ route('logout') }}">
                                 @csrf
-                                <button type="submit" class="w-full text-left px-4 py-2 text-sm text-gray-800 hover:bg-blue-100 transition font-semibold">
+                                <button type="submit" class="w-full text-left px-4 py-2 text-sm text-gray-900 hover:bg-blue-100 transition font-bold">
                                     🚪 Sair
                                 </button>
                             </form>
@@ -91,57 +91,57 @@
     </div>
 
     {{-- MENU RESPONSIVO (Mobile) --}}
-    <div :class="{'block': open, 'hidden': ! open}" class="hidden sm:hidden bg-blue-800">
+    <div :class="{'block': open, 'hidden': ! open}" class="hidden sm:hidden bg-white border-t border-gray-200 shadow-lg">
         <div class="pt-2 pb-3 space-y-1 px-2">
-            <a href="{{ route('dashboard') }}" class="block px-3 py-2 rounded-lg text-white hover:bg-blue-700 transition font-bold {{ request()->routeIs('dashboard') ? 'bg-blue-700' : '' }}">
+            <a href="{{ route('dashboard') }}" class="block px-3 py-2 rounded-lg text-gray-900 font-bold hover:bg-gray-100 transition {{ request()->routeIs('dashboard') ? 'bg-blue-50 text-blue-700' : '' }}">
                 📊 Painel
             </a>
 
             @if (Auth::check() && Auth::user()->role === 'admin')
-                <a href="{{ route('admin.dashboard') }}" class="block px-3 py-2 rounded-lg text-white hover:bg-blue-700 transition font-bold {{ request()->routeIs('admin.dashboard') ? 'bg-blue-700' : '' }}">
+                <a href="{{ route('admin.dashboard') }}" class="block px-3 py-2 rounded-lg text-gray-900 font-bold hover:bg-gray-100 transition {{ request()->routeIs('admin.dashboard') ? 'bg-blue-50 text-blue-700' : '' }}">
                     ⚙️ Painel de Admin
                 </a>
             @elseif (Auth::check() && Auth::user()->role === 'client')
-                <a href="{{ route('inspections.create') }}" class="block px-3 py-2 rounded-lg text-white hover:bg-blue-700 transition font-bold {{ request()->routeIs('inspections.create') ? 'bg-blue-700' : '' }}">
+                <a href="{{ route('inspections.create') }}" class="block px-3 py-2 rounded-lg text-gray-900 font-bold hover:bg-gray-100 transition {{ request()->routeIs('inspections.create') ? 'bg-blue-50 text-blue-700' : '' }}">
                     ➕ Nova Vistoria
                 </a>
-                <a href="{{ route('inspections.history') }}" class="block px-3 py-2 rounded-lg text-white hover:bg-blue-700 transition font-bold {{ request()->routeIs('inspections.history') ? 'bg-blue-700' : '' }}">
+                <a href="{{ route('inspections.history') }}" class="block px-3 py-2 rounded-lg text-gray-900 font-bold hover:bg-gray-100 transition {{ request()->routeIs('inspections.history') ? 'bg-blue-50 text-blue-700' : '' }}">
                     📋 Meus Laudos
                 </a>
             @elseif (Auth::check() && Auth::user()->role === 'analyst')
-                <a href="{{ route('analyst.dashboard') }}" class="block px-3 py-2 rounded-lg text-white hover:bg-blue-700 transition font-bold {{ request()->routeIs('analyst.dashboard') ? 'bg-blue-700' : '' }}">
-                    👨‍💼 Painel do Analista
+                <a href="{{ route('analyst.dashboard') }}" class="block px-3 py-2 rounded-lg text-gray-900 font-bold hover:bg-gray-100 transition {{ request()->routeIs('analyst.dashboard') ? 'bg-blue-50 text-blue-700' : '' }}">
+                    � Painel do Mesário
                 </a>
-                <a href="{{ route('analyst.inspections.all') }}" class="block px-3 py-2 rounded-lg text-white hover:bg-blue-700 transition font-bold {{ request()->routeIs('analyst.inspections.all') ? 'bg-blue-700' : '' }}">
+                <a href="{{ route('analyst.inspections.all') }}" class="block px-3 py-2 rounded-lg text-gray-900 font-bold hover:bg-gray-100 transition {{ request()->routeIs('analyst.inspections.all') ? 'bg-blue-50 text-blue-700' : '' }}">
                     🔍 Todas as Vistorias
                 </a>
             @endif
         </div>
 
-        <div class="pt-4 pb-3 border-t border-blue-600 px-2">
+        <div class="pt-4 pb-3 border-t border-gray-200 px-2 bg-gray-50">
             @if (Auth::check())
-                <div class="px-2 py-2">
-                    <div class="font-bold text-white text-lg">{{ Auth::user()->name }}</div>
-                    <div class="text-sm text-blue-100 font-semibold">{{ Auth::user()->email }}</div>
+                <div class="px-3 py-3 bg-white rounded-lg mb-3 border border-gray-200 shadow-sm">
+                    <div class="font-bold text-gray-900 text-lg">{{ Auth::user()->name }}</div>
+                    <div class="text-sm text-gray-600 font-semibold">{{ Auth::user()->email }}</div>
                 </div>
 
-                <div class="mt-3 space-y-1">
-                    <a href="{{ route('profile.edit') }}" class="block px-3 py-2 rounded-lg text-white hover:bg-blue-700 transition font-bold">
-                        ⚡ Perfil
+                <div class="mt-3 space-y-2">
+                    <a href="{{ route('profile.edit') }}" class="block px-4 py-3 rounded-lg text-gray-900 bg-white hover:bg-gray-50 transition font-bold shadow-sm border border-gray-200">
+                        ⚡ Meu Perfil
                     </a>
 
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf
-                        <button type="submit" class="w-full text-left px-3 py-2 rounded-lg text-white hover:bg-blue-700 transition font-bold">
+                        <button type="submit" class="w-full text-left px-4 py-3 rounded-lg text-white bg-red-600 hover:bg-red-700 transition font-bold shadow-sm">
                             🚪 Sair
                         </button>
                     </form>
                 </div>
             @else
-                <a href="{{ route('login') }}" class="block px-3 py-2 rounded-lg text-white hover:bg-blue-700 transition font-bold">
+                <a href="{{ route('login') }}" class="block px-3 py-2 rounded-lg text-gray-900 hover:bg-gray-100 transition font-bold">
                     Login
                 </a>
-                <a href="{{ route('register') }}" class="block px-3 py-2 rounded-lg text-white hover:bg-blue-700 transition font-bold mt-2">
+                <a href="{{ route('register') }}" class="block px-3 py-2 rounded-lg text-gray-900 hover:bg-gray-100 transition font-bold mt-2">
                     Cadastro
                 </a>
             @endif
