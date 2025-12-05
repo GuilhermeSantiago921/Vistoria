@@ -81,11 +81,12 @@ apt install -y php8.3 php8.3-cli php8.3-fpm php8.3-common \
     php8.3-mbstring php8.3-zip php8.3-gd php8.3-bcmath \
     php8.3-intl php8.3-opcache
 
-# Configurar PHP
-sed -i 's/upload_max_filesize = 2M/upload_max_filesize = 70M/g' /etc/php/8.3/fpm/php.ini
-sed -i 's/post_max_size = 8M/post_max_size = 70M/g' /etc/php/8.3/fpm/php.ini
+# Configurar PHP para upload de vistorias (10 fotos até 30MB total)
+sed -i 's/upload_max_filesize = 2M/upload_max_filesize = 5M/g' /etc/php/8.3/fpm/php.ini
+sed -i 's/post_max_size = 8M/post_max_size = 35M/g' /etc/php/8.3/fpm/php.ini
 sed -i 's/memory_limit = 128M/memory_limit = 256M/g' /etc/php/8.3/fpm/php.ini
-sed -i 's/max_execution_time = 30/max_execution_time = 300/g' /etc/php/8.3/fpm/php.ini
+sed -i 's/max_execution_time = 30/max_execution_time = 120/g' /etc/php/8.3/fpm/php.ini
+sed -i 's/;max_input_time = 60/max_input_time = 120/g' /etc/php/8.3/fpm/php.ini
 
 log_success "PHP 8.3 instalado e configurado"
 
@@ -324,7 +325,8 @@ server {
         deny all;
     }
 
-    client_max_body_size 70M;
+    # Limite para upload de vistorias (10 fotos até 30MB total + overhead)
+    client_max_body_size 35M;
 }
 EOF
 

@@ -4,7 +4,7 @@
             <div class="flex items-center gap-8">
                 <div class="shrink-0 flex items-center">
                     <a href="{{ route('dashboard') }}" class="flex items-center gap-3 font-bold text-2xl text-white hover:opacity-90 transition">
-                        <img src="{{ asset('logo.png') }}" alt="Logo" class="h-10 w-10">
+                        <img src="{{ asset('logo.png') }}" alt="Logo" class="h-14 w-auto">
                         <span>Vistoria</span>
                     </a>
                 </div>

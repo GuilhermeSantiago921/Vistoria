@@ -75,6 +75,26 @@ class InspectionController extends Controller
                 '*.max' => 'O tamanho máximo permitido é 5MB por foto.',
                 '*.image' => 'O arquivo deve ser uma imagem válida.',
             ]);
+            
+            // PATCH 2: Validar tamanho total de upload (máximo 30MB total)
+            $totalSize = 0;
+            $photoFields = ['front_photo', 'back_photo', 'right_side_photo', 'left_side_photo', 
+                           'right_window_engraving_photo', 'left_window_engraving_photo', 
+                           'chassis_engraving_photo', 'eta_photo', 'odometer_photo', 'engine_photo'];
+            
+            foreach ($photoFields as $field) {
+                if ($request->hasFile($field)) {
+                    $totalSize += $request->file($field)->getSize();
+                }
+            }
+            
+            if ($totalSize > 30 * 1024 * 1024) { // 30MB em bytes
+                \Log::warning('Upload excede tamanho máximo', ['total_size' => $totalSize]);
+                return redirect()->back()
+                    ->withErrors(['upload' => 'O tamanho total dos arquivos excede 30MB. Por favor, reduza o tamanho das imagens.'])
+                    ->withInput();
+            }
+            
             \Log::info('Validação passou com sucesso');
         } catch (\Illuminate\Validation\ValidationException $e) {
             \Log::error('Erro de validação:', ['errors' => $e->errors()]);
@@ -115,7 +135,7 @@ class InspectionController extends Controller
             // Continua sem dados agregados
         }
 
-                // 3. TRANSAÇÃO DE SALVAMENTO LOCAL E DEDUÇÃO DE CRÉDITO
+        // 3. TRANSAÇÃO DE SALVAMENTO LOCAL E DEDUÇÃO DE CRÉDITO
         try {
             \Log::info('Iniciando transação de salvamento');
             
@@ -539,7 +559,6 @@ class InspectionController extends Controller
             });
 
         } catch (\Exception $e) {
-            DB::rollBack();
             \Log::error('Erro ao aprovar vistoria: ' . $e->getMessage());
             return back()->with('error', 'Ocorreu um erro ao salvar a análise. Tente novamente.');
         }
@@ -576,7 +595,6 @@ class InspectionController extends Controller
             });
 
         } catch (\Exception $e) {
-            DB::rollBack();
             \Log::error('Erro ao reprovar vistoria: ' . $e->getMessage());
             return back()->with('error', 'Ocorreu um erro ao salvar a análise. Tente novamente.');
         }

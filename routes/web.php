@@ -7,6 +7,7 @@ use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\PhotoController;
 use App\Http\Middleware\AnalystMiddleware;
 use App\Http\Middleware\CheckPaymentMiddleware;
 use App\Http\Middleware\AdminMiddleware;
@@ -53,11 +54,17 @@ Route::middleware(['auth'])->group(function () {
 
     // Rotas do cliente para Vistoria
     Route::get('/vistoria/nova', [InspectionController::class, 'create'])->middleware(CheckPaymentMiddleware::class)->name('inspections.create');
-    Route::post('/vistoria/nova', [InspectionController::class, 'store'])->middleware(CheckPaymentMiddleware::class)->name('inspections.store');
+    Route::post('/vistoria/nova', [InspectionController::class, 'store'])
+        ->middleware([CheckPaymentMiddleware::class, 'throttle:10,60']) // Max 10 inspeções por hora
+        ->name('inspections.store');
     Route::get('/meus-laudos', [InspectionController::class, 'history'])->name('inspections.history');
     
     // Rota para gerar o PDF (acessível por Analista e Cliente)
     Route::get('/report/inspection/{inspection}/pdf', [ReportController::class, 'generatePdf'])->name('report.inspection.pdf');
+    
+    // PATCH 3: Rotas protegidas para download de fotos
+    Route::get('/photos/{photo}/download', [PhotoController::class, 'download'])->name('photos.download');
+    Route::get('/photos/{photo}', [PhotoController::class, 'show'])->name('photos.show');
 });
 
 /*

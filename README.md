@@ -1,63 +1,126 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# 🚗 Sistema de Vistoria Veicular
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Sistema completo de gerenciamento de vistorias veiculares com upload de fotos, análise técnica, integração com base de dados externa e geração de relatórios em PDF.
 
-## About Laravel
+## ✨ Características Principais
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- 📸 **Upload de 10 fotos** por vistoria
+- 💳 **Sistema de créditos** para controle de uso
+- 👥 **3 níveis de acesso**: Administrador, Analista e Cliente
+- 📊 **Painel administrativo** completo
+- ✅ **Checklist técnico** detalhado
+- 🔗 **Integração SQL Server** externa
+- 📄 **Geração de PDF** com relatório completo
+- 📧 **Notificações por e-mail** automáticas
+- 📱 **Interface responsiva**
+- 🔒 **Segurança** robusta
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## 📋 Requisitos
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- **SO**: Ubuntu 20.04+, Debian 11+ ou Rocky Linux 8/9
+- **PHP**: 8.2+
+- **MySQL/MariaDB**: 8.0+ / 10.3+ (ou SQLite)
+- **Node.js**: 18.x+
+- **RAM**: 2GB mínimo
+- **Disco**: 20GB mínimo
 
-## Learning Laravel
+## 🚀 Instalação Rápida
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.1
+### Ubuntu/Debian
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+```bash
+git clone https://github.com/GuilhermeSantiago921/vistoria.git
+cd vistoria
+sudo bash install.sh
+```
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### Rocky Linux
 
-## Laravel Sponsors
+```bash
+git clone https://github.com/GuilhermeSantiago921/vistoria.git
+cd vistoria
+sudo bash install-rocky-linux.sh
+```
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+O instalador irá configurar TUDO automaticamente! ✨
 
-### Premium Partners
+## 💻 Desenvolvimento Local
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+```bash
+# Servidor otimizado
+./start-dev.sh
 
-## Contributing
+# Ou com Docker
+docker-compose up -d
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## 📸 Fotos Necessárias
 
-## Code of Conduct
+1. Frente do Veículo
+2. Traseira do Veículo
+3. Lateral Direita
+4. Lateral Esquerda
+5. Vidro Lateral Direita (Gravação)
+6. Vidro Lateral Esquerda (Gravação)
+7. Gravação do Chassi
+8. Etiqueta de Identificação (ETA)
+9. Hodômetro
+10. Motor
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+## 👥 Níveis de Acesso
 
-## Security Vulnerabilities
+| Tipo | Permissões |
+|------|------------|
+| **Admin** | Gerenciar usuários, atribuir créditos, todas as vistorias |
+| **Analista** | Analisar vistorias, aprovar/reprovar, gerar relatórios |
+| **Cliente** | Solicitar vistorias, upload de fotos, acompanhar status |
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+## 📚 Documentação
 
-## License
+- [`INSTALL_LINUX.md`](INSTALL_LINUX.md) - Instalação Ubuntu/Debian
+- [`INSTALL_ROCKY_LINUX.md`](INSTALL_ROCKY_LINUX.md) - Instalação Rocky Linux
+- [`README_DEV.md`](README_DEV.md) - Desenvolvimento
+- [`TROUBLESHOOTING.md`](TROUBLESHOOTING.md) - Problemas comuns
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
-# Vistoria
-# Vistoria
+## 🔧 Comandos Úteis
+
+```bash
+# Limpar cache
+php artisan cache:clear
+php artisan config:clear
+
+# Ver logs
+tail -f storage/logs/laravel.log
+
+# Criar admin
+php artisan tinker
+>>> User::create(['name' => 'Admin', 'email' => 'admin@test.com', 'password' => bcrypt('senha123'), 'role' => 'admin', 'inspection_credits' => 999]);
+```
+
+## 🛡️ Segurança
+
+✅ Senhas bcrypt  
+✅ Proteção CSRF  
+✅ Validação de uploads  
+✅ SQL injection prevention  
+✅ XSS protection  
+✅ Rate limiting  
+
+## 💾 Backup Automático
+
+Configurado automaticamente para rodar diariamente às 2h em `/backups/vistoria/`
+
+## 📞 Suporte
+
+- 📧 guilhermesantiago921@gmail.com
+- 💬 [GitHub Issues](https://github.com/GuilhermeSantiago921/vistoria/issues)
+
+## 📝 Licença
+
+[Adicione informações de licença]
+
+---
+
+**Desenvolvido com ❤️ para facilitar a gestão de vistorias veiculares**
+
+⭐ Se este projeto foi útil, dê uma estrela no GitHub!

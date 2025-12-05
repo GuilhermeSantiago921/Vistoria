@@ -1,7 +1,7 @@
 # Dockerfile - Vistoria Veicular
 # Laravel 12 + MySQL + Redis + MailHog
 
-FROM php:8.2-fpm-alpine
+FROM php:8.2-cli-alpine
 
 # Set working directory
 WORKDIR /app
@@ -20,39 +20,29 @@ RUN apk add --no-cache \
     freetype-dev \
     nodejs \
     npm \
-    icu-dev \
-    postgresql-dev
+    supervisor \
+    icu-dev
 
-# Install PHP extensions with proper dependencies
-RUN apk add --no-cache --virtual .build-deps \
-    $PHPIZE_DEPS \
-    && docker-php-ext-configure gd \
+# Install PHP extensions
+RUN docker-php-ext-configure gd \
         --with-freetype \
         --with-jpeg \
-    && docker-php-ext-install -j$(nproc) \
+    && docker-php-ext-install \
         pdo \
         pdo_mysql \
         zip \
         gd \
         bcmath \
         ctype \
+        fileinfo \
         json \
         tokenizer \
         xml \
-        intl \
-        opcache \
-    && apk del .build-deps
+        intl
 
 # Install PECL extensions
 RUN pecl install redis \
-    && docker-php-ext-enable redis opcache
-
-# Configure PHP for large uploads (Sistema de Vistorias)
-RUN echo "upload_max_filesize = 5M" >> /usr/local/etc/php/conf.d/uploads.ini && \
-    echo "post_max_size = 35M" >> /usr/local/etc/php/conf.d/uploads.ini && \
-    echo "memory_limit = 256M" >> /usr/local/etc/php/conf.d/uploads.ini && \
-    echo "max_execution_time = 120" >> /usr/local/etc/php/conf.d/uploads.ini && \
-    echo "max_input_time = 120" >> /usr/local/etc/php/conf.d/uploads.ini
+    && docker-php-ext-enable redis
 
 # Install Composer
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
@@ -87,5 +77,5 @@ RUN php artisan key:generate --force
 # Expose port
 EXPOSE 8000
 
-# Start Laravel with upload configurations
-CMD ["php", "-d", "upload_max_filesize=5M", "-d", "post_max_size=35M", "-d", "memory_limit=256M", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
+# Start Laravel development server
+CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]

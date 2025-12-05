@@ -68,15 +68,24 @@ class User extends Authenticatable
     }
 
     /**
-     * Consome um crédito de vistoria.
+     * PATCH 4: Consome um crédito de vistoria com lock pessimista (evita race condition)
+     * 
+     * Usa lockForUpdate() para garantir que apenas uma transação por vez
+     * possa modificar os créditos deste usuário
      */
     public function consumeCredit(): bool
     {
-        if ($this->hasCredits()) {
-            $this->decrement('inspection_credits');
-            return true;
-        }
-        return false;
+        return \DB::transaction(function () {
+            // Lock pessimista: bloqueia o registro até o fim da transação
+            $user = User::where('id', $this->id)->lockForUpdate()->first();
+            
+            if ($user->inspection_credits > 0) {
+                $user->decrement('inspection_credits');
+                return true;
+            }
+            
+            return false;
+        });
     }
 
     /**

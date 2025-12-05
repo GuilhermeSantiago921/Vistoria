@@ -1,0 +1,126 @@
+version: '3.8'
+
+services:
+  # Laravel Application with PHP-FPM
+  app:
+    image: php:8.2-fpm-alpine
+    container_name: vistoria-app
+    working_dir: /app
+    environment:
+      - APP_ENV=local
+      - APP_DEBUG=true
+      - APP_URL=http://localhost:8000
+      - DB_CONNECTION=mysql
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_DATABASE=vistoria
+      - DB_USERNAME=vistoria
+      - DB_PASSWORD=vistoria_pass
+      - CACHE_STORE=redis
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - QUEUE_CONNECTION=redis
+    volumes:
+      - .:/app
+    networks:
+      - vistoria
+    depends_on:
+      - mysql
+      - redis
+    command: /bin/sh -c "apk add --no-cache git curl zip unzip libzip-dev libpng-dev libjpeg-turbo-dev freetype-dev icu-dev && docker-php-ext-install -j4 pdo pdo_mysql zip gd bcmath ctype json tokenizer xml intl && curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer && cd /app && composer install && php artisan migrate:fresh --seed && php-fpm"
+
+  # Nginx Web Server
+  nginx:
+    image: nginx:alpine
+    container_name: vistoria-nginx
+    ports:
+      - "8000:80"
+    volumes:
+      - .:/app
+      - ./docker/nginx.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      - vistoria
+    depends_on:
+      - app
+
+  # MySQL Database
+  mysql:
+    image: mysql:8.0
+    container_name: vistoria-mysql
+    environment:
+      MYSQL_DATABASE: vistoria
+      MYSQL_ROOT_PASSWORD: root_pass
+      MYSQL_USER: vistoria
+      MYSQL_PASSWORD: vistoria_pass
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - vistoria
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: vistoria-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - vistoria
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      timeout: 10s
+      retries: 5
+
+  # phpMyAdmin
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: vistoria-phpmyadmin
+    environment:
+      PMA_HOST: mysql
+      PMA_USER: vistoria
+      PMA_PASSWORD: vistoria_pass
+    ports:
+      - "8080:80"
+    networks:
+      - vistoria
+    depends_on:
+      - mysql
+
+  # Redis Commander
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: vistoria-redis-commander
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - "8081:8081"
+    networks:
+      - vistoria
+    depends_on:
+      - redis
+
+  # MailHog for email testing
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: vistoria-mailhog
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    networks:
+      - vistoria
+
+networks:
+  vistoria:
+    driver: bridge
+
+volumes:
+  mysql_data:
+  redis_data:
