@@ -26,21 +26,43 @@ Sistema completo de gerenciamento de vistorias veiculares com upload de fotos, a
 
 ## 🚀 Instalação Rápida
 
-### Ubuntu/Debian
+### Opção 1: Instalação Direta (Recomendado)
+
+#### Ubuntu/Debian
 
 ```bash
-git clone https://github.com/GuilhermeSantiago921/vistoria.git
-cd vistoria
+# Baixar e executar instalador
+wget -O - https://raw.githubusercontent.com/GuilhermeSantiago921/Vistoria/main/install.sh | sudo bash
+```
+
+**OU** clone o repositório primeiro:
+
+```bash
+git clone https://github.com/GuilhermeSantiago921/Vistoria.git
+cd Vistoria
 sudo bash install.sh
 ```
 
-### Rocky Linux
+#### Rocky Linux
 
 ```bash
-git clone https://github.com/GuilhermeSantiago921/vistoria.git
-cd vistoria
+# Baixar e executar instalador
+wget -O - https://raw.githubusercontent.com/GuilhermeSantiago921/Vistoria/main/install-rocky-linux.sh | sudo bash
+```
+
+**OU** clone o repositório primeiro:
+
+```bash
+git clone https://github.com/GuilhermeSantiago921/Vistoria.git
+cd Vistoria
 sudo bash install-rocky-linux.sh
 ```
+
+### Opção 2: Instalação Manual
+
+Se preferir instalar manualmente, siga os guias:
+- Ubuntu/Debian: [`INSTALL_LINUX.md`](INSTALL_LINUX.md)
+- Rocky Linux: [`INSTALL_ROCKY_LINUX.md`](INSTALL_ROCKY_LINUX.md)
 
 O instalador irá configurar TUDO automaticamente! ✨
 

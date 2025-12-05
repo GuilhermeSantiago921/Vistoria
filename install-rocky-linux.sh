@@ -354,22 +354,61 @@ EOF
     print_success "Nginx configurado"
 }
 
-# 14. Copiar arquivos do projeto (assumindo que estão no diretório atual)
+# 14. Copiar arquivos do projeto
 copy_project_files() {
     print_header "COPIANDO ARQUIVOS DO PROJETO"
     
     SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
     
-    if [[ ! -f "$SCRIPT_DIR/composer.json" ]]; then
-        print_error "Arquivos do projeto não encontrados no diretório atual"
-        print_info "Por favor, execute este script no diretório raiz do projeto"
-        exit 1
+    # Verificar se estamos executando do diretório do projeto
+    if [[ -f "$SCRIPT_DIR/composer.json" ]]; then
+        # Script está sendo executado do diretório do projeto
+        print_info "Detectado que o script está no diretório do projeto"
+        
+        if [[ "$SCRIPT_DIR" != "/var/www/vistoria" ]]; then
+            # Copiar arquivos para /var/www/vistoria
+            print_info "Copiando arquivos para /var/www/vistoria..."
+            
+            # Fazer backup se já existir
+            if [[ -d "/var/www/vistoria" ]]; then
+                print_warning "Diretório /var/www/vistoria já existe. Fazendo backup..."
+                mv /var/www/vistoria /var/www/vistoria_backup_$(date +%Y%m%d_%H%M%S)
+            fi
+            
+            # Criar diretório e copiar
+            mkdir -p /var/www/vistoria
+            cp -r "$SCRIPT_DIR"/* /var/www/vistoria/
+            cp -r "$SCRIPT_DIR"/.[!.]* /var/www/vistoria/ 2>/dev/null || true
+            
+            print_success "Arquivos copiados para /var/www/vistoria"
+        else
+            print_info "Já estamos em /var/www/vistoria"
+        fi
+    else
+        # Script não está no diretório do projeto, tentar clonar do GitHub
+        print_info "Clonando repositório do GitHub..."
+        
+        cd /var/www
+        
+        if [[ -d "vistoria" ]]; then
+            print_warning "Diretório /var/www/vistoria já existe. Fazendo backup..."
+            mv vistoria vistoria_backup_$(date +%Y%m%d_%H%M%S)
+        fi
+        
+        # Clone do repositório
+        git clone https://github.com/GuilhermeSantiago921/Vistoria.git vistoria
+        
+        if [[ ! -d "vistoria" ]]; then
+            print_error "Falha ao clonar repositório!"
+            print_info "Por favor, clone manualmente ou copie os arquivos para /var/www/vistoria"
+            exit 1
+        fi
+        
+        print_success "Repositório clonado com sucesso"
     fi
     
-    cp -r "$SCRIPT_DIR"/* /var/www/vistoria/
-    cp -r "$SCRIPT_DIR"/.* /var/www/vistoria/ 2>/dev/null || true
-    
-    print_success "Arquivos copiados"
+    cd /var/www/vistoria
+    print_success "Arquivos do projeto prontos"
 }
 
 # 15. Instalar dependências

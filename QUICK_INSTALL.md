@@ -1,38 +1,48 @@
 # 🚀 INSTALAÇÃO RÁPIDA - Sistema de Vistoria
 
-## ⚡ Para servidores Linux (Instalação Automática)
+## ⚡ Instalação com Um Comando (SUPER RÁPIDO)
 
 ### Ubuntu / Debian
 
+**Opção 1: Download direto (mais rápido)**
 ```bash
-wget https://github.com/GuilhermeSantiago921/vistoria/archive/main.zip
-unzip main.zip
-cd vistoria-main
+wget -O - https://raw.githubusercontent.com/GuilhermeSantiago921/Vistoria/main/install.sh | sudo bash
+```
+
+**Opção 2: Clone do repositório**
+```bash
+git clone https://github.com/GuilhermeSantiago921/Vistoria.git
+cd Vistoria
 sudo bash install.sh
 ```
 
-**OU** com Git:
-
+**Opção 3: Download e executar separado**
 ```bash
-git clone https://github.com/GuilhermeSantiago921/vistoria.git
-cd vistoria
+wget https://github.com/GuilhermeSantiago921/Vistoria/archive/main.zip
+unzip main.zip
+cd Vistoria-main
 sudo bash install.sh
 ```
 
 ### Rocky Linux / CentOS
 
+**Opção 1: Download direto (mais rápido)**
 ```bash
-wget https://github.com/GuilhermeSantiago921/vistoria/archive/main.zip
-unzip main.zip
-cd vistoria-main
+wget -O - https://raw.githubusercontent.com/GuilhermeSantiago921/Vistoria/main/install-rocky-linux.sh | sudo bash
+```
+
+**Opção 2: Clone do repositório**
+```bash
+git clone https://github.com/GuilhermeSantiago921/Vistoria.git
+cd Vistoria
 sudo bash install-rocky-linux.sh
 ```
 
-**OU** com Git:
-
+**Opção 3: Download e executar separado**
 ```bash
-git clone https://github.com/GuilhermeSantiago921/vistoria.git
-cd vistoria
+wget https://github.com/GuilhermeSantiago921/Vistoria/archive/main.zip
+unzip main.zip
+cd Vistoria-main
 sudo bash install-rocky-linux.sh
 ```
 

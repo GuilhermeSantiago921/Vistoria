@@ -162,23 +162,54 @@ log_success "Git instalado"
 # PASSO 8: Baixar Código do Sistema
 ###############################################################################
 log_info "Passo 8/12: Baixando código do sistema..."
-mkdir -p /var/www
-cd /var/www
 
-# Você pode alterar para seu repositório
-if [ -d "vistoria" ]; then
-    log_warning "Diretório /var/www/vistoria já existe. Fazendo backup..."
-    mv vistoria vistoria_backup_$(date +%Y%m%d_%H%M%S)
-fi
+# Verificar se estamos executando do diretório do projeto
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-# Clone do repositório (ajuste a URL)
-# git clone https://github.com/GuilhermeSantiago921/vistoria.git
-
-# Por enquanto, assume que você copiou os arquivos manualmente
-if [ ! -d "vistoria" ]; then
-    log_error "Diretório /var/www/vistoria não encontrado!"
-    log_info "Por favor, copie os arquivos do sistema para /var/www/vistoria e execute este script novamente."
-    exit 1
+if [ -f "$SCRIPT_DIR/artisan" ]; then
+    # Script está sendo executado do diretório do projeto
+    log_info "Detectado que o script está no diretório do projeto"
+    
+    if [ "$SCRIPT_DIR" != "/var/www/vistoria" ]; then
+        # Copiar arquivos para /var/www/vistoria
+        log_info "Copiando arquivos para /var/www/vistoria..."
+        
+        # Fazer backup se já existir
+        if [ -d "/var/www/vistoria" ]; then
+            log_warning "Diretório /var/www/vistoria já existe. Fazendo backup..."
+            mv /var/www/vistoria /var/www/vistoria_backup_$(date +%Y%m%d_%H%M%S)
+        fi
+        
+        # Criar diretório e copiar
+        mkdir -p /var/www/vistoria
+        cp -r "$SCRIPT_DIR"/* /var/www/vistoria/
+        cp -r "$SCRIPT_DIR"/.[!.]* /var/www/vistoria/ 2>/dev/null || true
+        
+        log_success "Arquivos copiados para /var/www/vistoria"
+    else
+        log_info "Já estamos em /var/www/vistoria"
+    fi
+else
+    # Script não está no diretório do projeto, tentar clonar do GitHub
+    log_info "Clonando repositório do GitHub..."
+    
+    cd /var/www
+    
+    if [ -d "vistoria" ]; then
+        log_warning "Diretório /var/www/vistoria já existe. Fazendo backup..."
+        mv vistoria vistoria_backup_$(date +%Y%m%d_%H%M%S)
+    fi
+    
+    # Clone do repositório
+    git clone https://github.com/GuilhermeSantiago921/Vistoria.git vistoria
+    
+    if [ ! -d "vistoria" ]; then
+        log_error "Falha ao clonar repositório!"
+        log_info "Por favor, clone manualmente ou copie os arquivos para /var/www/vistoria"
+        exit 1
+    fi
+    
+    log_success "Repositório clonado com sucesso"
 fi
 
 cd /var/www/vistoria
