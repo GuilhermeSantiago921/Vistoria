@@ -4,33 +4,22 @@
 # Script de Instalação Automática - Vistoria do GitHub
 # Compatível com Ubuntu 20.04, 22.04 e 24.04
 # Uso: sudo bash install-from-github.sh
+# Ou via pipe: curl -fsSL <url> | sudo bash -s -- --domain=meusite.com
 ################################################################################
 
-set -e
+# NÃO usar set -e para não abortar em erros esperados
 
 # Cores para output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
-# Funções
-log_info() {
-    echo -e "${BLUE}[INFO]${NC} $1"
-}
-
-log_success() {
-    echo -e "${GREEN}[✓]${NC} $1"
-}
-
-log_warning() {
-    echo -e "${YELLOW}[⚠]${NC} $1"
-}
-
-log_error() {
-    echo -e "${RED}[✗]${NC} $1"
-}
+log_info()    { echo -e "${BLUE}[INFO]${NC} $1"; }
+log_success() { echo -e "${GREEN}[✓]${NC} $1"; }
+log_warning() { echo -e "${YELLOW}[⚠]${NC} $1"; }
+log_error()   { echo -e "${RED}[✗]${NC} $1"; }
 
 # Verificar se está executando como root
 if [ "$EUID" -ne 0 ]; then
@@ -40,65 +29,131 @@ fi
 
 ################################################################################
 # CONFIGURAÇÃO INICIAL
+# Quando executado via pipe (curl | bash), o stdin não está disponível
+# Por isso lemos do /dev/tty diretamente
 ################################################################################
 
 log_info "================================"
-log_info "Instalação do Vistoria"
+log_info "  Instalação do Vistoria"
 log_info "================================"
 
+# Abrir /dev/tty para leitura interativa mesmo quando via pipe
+exec < /dev/tty
+
 # Perguntar configurações
-read -p "Digite o caminho para instalar (padrão: /var/www/vistoria): " INSTALL_PATH
+read -p "Caminho de instalação [/var/www/vistoria]: " INSTALL_PATH
 INSTALL_PATH=${INSTALL_PATH:-/var/www/vistoria}
 
-read -p "Digite o domínio (ex: seu-dominio.com.br): " DOMAIN
-if [ -z "$DOMAIN" ]; then
-    log_error "Domínio é obrigatório"
-    exit 1
-fi
+while true; do
+    read -p "Domínio do servidor (ex: vistoria.meusite.com.br): " DOMAIN
+    [ -n "$DOMAIN" ] && break
+    log_warning "Domínio não pode ser vazio!"
+done
 
-read -p "Qual banco de dados usar? (mysql/postgresql/sqlserver): " DB_TYPE
+read -p "Banco de dados [mysql/postgresql/sqlserver] (padrão: mysql): " DB_TYPE
 DB_TYPE=${DB_TYPE:-mysql}
 
-read -p "Host do banco de dados (padrão: localhost): " DB_HOST
+read -p "Host do banco de dados [localhost]: " DB_HOST
 DB_HOST=${DB_HOST:-localhost}
 
-read -p "Nome do banco de dados (padrão: vistoria): " DB_NAME
+read -p "Nome do banco de dados [vistoria]: " DB_NAME
 DB_NAME=${DB_NAME:-vistoria}
 
-read -p "Usuário do banco de dados (padrão: vistoria_user): " DB_USER
+read -p "Usuário do banco [vistoria_user]: " DB_USER
 DB_USER=${DB_USER:-vistoria_user}
 
-read -sp "Senha do banco de dados: " DB_PASSWORD
-echo
+while true; do
+    read -sp "Senha do banco de dados: " DB_PASSWORD; echo
+    [ -n "$DB_PASSWORD" ] && break
+    log_warning "Senha não pode ser vazia!"
+done
 
-read -p "Email do administrador: " ADMIN_EMAIL
+while true; do
+    read -p "Email do administrador: " ADMIN_EMAIL
+    [ -n "$ADMIN_EMAIL" ] && break
+    log_warning "Email não pode ser vazio!"
+done
 
-read -sp "Senha do administrador: " ADMIN_PASSWORD
-echo
+while true; do
+    read -sp "Senha do administrador: " ADMIN_PASSWORD; echo
+    [ -n "$ADMIN_PASSWORD" ] && break
+    log_warning "Senha não pode ser vazia!"
+done
 
-read -p "Usar HTTPS com Let's Encrypt? (s/n): " USE_HTTPS
-USE_HTTPS=${USE_HTTPS:-s}
+read -p "Usar HTTPS com Let's Encrypt? [s/n] (padrão: n): " USE_HTTPS
+USE_HTTPS=${USE_HTTPS:-n}
+
+# Fechar /dev/tty
+exec <&-
+
+# Definir porta do banco
+if [ "$DB_TYPE" = "postgresql" ]; then
+    DB_PORT=5432
+    DB_CONN="pgsql"
+elif [ "$DB_TYPE" = "sqlserver" ]; then
+    DB_PORT=1433
+    DB_CONN="sqlsrv"
+else
+    DB_PORT=3306
+    DB_CONN="mysql"
+fi
+
+echo ""
+log_info "Configurações definidas:"
+echo "  - Caminho: $INSTALL_PATH"
+echo "  - Domínio: $DOMAIN"
+echo "  - Banco:   $DB_TYPE @ $DB_HOST:$DB_PORT/$DB_NAME"
+echo "  - Admin:   $ADMIN_EMAIL"
+echo "  - HTTPS:   $USE_HTTPS"
+echo ""
+read -p "Confirmar e iniciar instalação? [S/n]: " CONFIRM < /dev/tty
+CONFIRM=${CONFIRM:-s}
+if [[ "$CONFIRM" =~ ^[Nn]$ ]]; then
+    log_warning "Instalação cancelada."
+    exit 0
+fi
 
 ################################################################################
 # ATUALIZAR SISTEMA
 ################################################################################
 
 log_info "Atualizando sistema..."
-apt update
+apt update -y
 apt upgrade -y
-apt install -y curl wget git build-essential
+apt install -y curl wget git build-essential software-properties-common lsb-release ca-certificates gnupg
 
 log_success "Sistema atualizado"
 
 ################################################################################
-# INSTALAR PHP
+# INSTALAR PHP 8.2
 ################################################################################
+
+log_info "Adicionando repositório PHP (ondrej/php)..."
+add-apt-repository ppa:ondrej/php -y
+apt update -y
 
 log_info "Instalando PHP 8.2 e extensões..."
 
-apt install -y php8.2-cli php8.2-fpm php8.2-mysql php8.2-pgsql php8.2-curl \
-    php8.2-gd php8.2-mbstring php8.2-xml php8.2-zip php8.2-bcmath php8.2-json \
-    php8.2-tokenizer php8.2-pdo php8.2-sqlite3 php8.2-odbc
+# Nota: json, tokenizer e pdo já fazem parte do PHP core - não existem como pacotes separados
+apt install -y \
+    php8.2 \
+    php8.2-cli \
+    php8.2-fpm \
+    php8.2-common \
+    php8.2-mysql \
+    php8.2-pgsql \
+    php8.2-curl \
+    php8.2-gd \
+    php8.2-mbstring \
+    php8.2-xml \
+    php8.2-zip \
+    php8.2-bcmath \
+    php8.2-sqlite3 \
+    php8.2-intl \
+    php8.2-readline
+
+systemctl enable php8.2-fpm
+systemctl start php8.2-fpm
 
 log_success "PHP 8.2 instalado"
 
@@ -129,21 +184,25 @@ log_success "Composer instalado"
 # INSTALAR BANCO DE DADOS
 ################################################################################
 
+################################################################################
+# INSTALAR BANCO DE DADOS
+################################################################################
+
 case $DB_TYPE in
     mysql)
         log_info "Instalando MySQL..."
         apt install -y mysql-server
         systemctl start mysql
         systemctl enable mysql
-        
-        # Criar banco e usuário
-        mysql -u root << EOF
-CREATE DATABASE IF NOT EXISTS $DB_NAME;
-CREATE USER IF NOT EXISTS '$DB_USER'@'localhost' IDENTIFIED BY '$DB_PASSWORD';
-GRANT ALL PRIVILEGES ON $DB_NAME.* TO '$DB_USER'@'localhost';
+
+        log_info "Configurando banco MySQL..."
+        # No Ubuntu, MySQL recém-instalado usa auth_socket para root
+        mysql -u root << MYSQL_SCRIPT
+CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\`;
+CREATE USER IF NOT EXISTS '${DB_USER}'@'localhost' IDENTIFIED BY '${DB_PASSWORD}';
+GRANT ALL PRIVILEGES ON \`${DB_NAME}\`.* TO '${DB_USER}'@'localhost';
 FLUSH PRIVILEGES;
-EXIT;
-EOF
+MYSQL_SCRIPT
         log_success "MySQL configurado"
         ;;
     postgresql)
@@ -151,24 +210,29 @@ EOF
         apt install -y postgresql postgresql-contrib
         systemctl start postgresql
         systemctl enable postgresql
-        
-        # Criar banco e usuário
-        sudo -u postgres createdb $DB_NAME 2>/dev/null || true
-        sudo -u postgres dropuser $DB_USER 2>/dev/null || true
-        sudo -u postgres createuser $DB_USER
-        sudo -u postgres psql -c "ALTER USER $DB_USER WITH PASSWORD '$DB_PASSWORD';"
-        sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER;"
+
+        log_info "Configurando banco PostgreSQL..."
+        sudo -u postgres psql -c "CREATE DATABASE ${DB_NAME};" 2>/dev/null || log_warning "Banco já existe"
+        sudo -u postgres psql -c "CREATE USER ${DB_USER} WITH PASSWORD '${DB_PASSWORD}';" 2>/dev/null || \
+            sudo -u postgres psql -c "ALTER USER ${DB_USER} WITH PASSWORD '${DB_PASSWORD}';"
+        sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE ${DB_NAME} TO ${DB_USER};"
+        sudo -u postgres psql -c "ALTER DATABASE ${DB_NAME} OWNER TO ${DB_USER};"
         log_success "PostgreSQL configurado"
         ;;
     sqlserver)
         log_info "Instalando SQL Server ODBC Driver..."
-        curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add -
-        add-apt-repository "$(wget -qO- https://packages.microsoft.com/config/ubuntu/$(lsb_release -rs)/prod.list)"
-        apt update
-        apt install -y msodbcsql18 mssql-tools18
-        echo 'export PATH="$PATH:/opt/mssql-tools18/bin"' >> /root/.bashrc
-        source /root/.bashrc
+        curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /usr/share/keyrings/microsoft-prod.gpg
+        UBUNTU_VER=$(lsb_release -rs)
+        curl -fsSL "https://packages.microsoft.com/config/ubuntu/${UBUNTU_VER}/prod.list" \
+            > /etc/apt/sources.list.d/mssql-release.list
+        apt update -y
+        ACCEPT_EULA=Y apt install -y msodbcsql18 mssql-tools18 unixodbc-dev
+        log_warning "SQL Server: crie o banco '${DB_NAME}' manualmente no servidor remoto."
         log_success "SQL Server ODBC Driver instalado"
+        ;;
+    *)
+        log_error "Tipo de banco '${DB_TYPE}' inválido. Use: mysql, postgresql ou sqlserver"
+        exit 1
         ;;
 esac
 
@@ -203,7 +267,7 @@ log_success "Repositório clonado"
 
 log_info "Criando arquivo .env..."
 
-cat > .env << EOF
+cat > .env << ENV_FILE
 APP_NAME=Vistoria
 APP_ENV=production
 APP_KEY=
@@ -213,26 +277,27 @@ APP_URL=https://${DOMAIN}
 LOG_CHANNEL=stack
 LOG_LEVEL=error
 
-DB_CONNECTION=$DB_TYPE
-DB_HOST=$DB_HOST
-DB_PORT=$([ "$DB_TYPE" = "postgresql" ] && echo "5432" || echo "3306")
-DB_DATABASE=$DB_NAME
-DB_USERNAME=$DB_USER
-DB_PASSWORD=$DB_PASSWORD
+DB_CONNECTION=${DB_CONN}
+DB_HOST=${DB_HOST}
+DB_PORT=${DB_PORT}
+DB_DATABASE=${DB_NAME}
+DB_USERNAME=${DB_USER}
+DB_PASSWORD=${DB_PASSWORD}
 
 CACHE_DRIVER=file
 QUEUE_CONNECTION=sync
 SESSION_DRIVER=file
+SESSION_LIFETIME=120
 
 MAIL_MAILER=smtp
 MAIL_HOST=smtp.mailtrap.io
 MAIL_PORT=587
-MAIL_USERNAME=seu-usuario
-MAIL_PASSWORD=sua-senha
-MAIL_ENCRYPTION=tls
+MAIL_USERNAME=null
+MAIL_PASSWORD=null
+MAIL_ENCRYPTION=null
 MAIL_FROM_ADDRESS=noreply@${DOMAIN}
 MAIL_FROM_NAME="Vistoria"
-EOF
+ENV_FILE
 
 chmod 600 .env
 log_success "Arquivo .env criado"
@@ -284,21 +349,22 @@ log_success "Migrações executadas"
 
 log_info "Configurando Nginx..."
 
-cat > /etc/nginx/sites-available/vistoria << 'NGINX_CONF'
+cat > /etc/nginx/sites-available/vistoria << NGINX_CONF
 server {
     listen 80;
-    server_name _default_;
-    root __INSTALL_PATH__/public;
+    listen [::]:80;
+    server_name ${DOMAIN} www.${DOMAIN};
+    root ${INSTALL_PATH}/public;
 
     add_header X-Frame-Options "SAMEORIGIN" always;
     add_header X-Content-Type-Options "nosniff" always;
     add_header X-XSS-Protection "1; mode=block" always;
 
-    index index.html index.htm index.php;
+    index index.php;
     charset utf-8;
 
     location / {
-        try_files $uri $uri/ /index.php?$query_string;
+        try_files \$uri \$uri/ /index.php?\$query_string;
     }
 
     location = /favicon.ico { access_log off; log_not_found off; }
@@ -309,7 +375,7 @@ server {
     location ~ \.php$ {
         fastcgi_pass unix:/var/run/php/php8.2-fpm.sock;
         fastcgi_index index.php;
-        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+        fastcgi_param SCRIPT_FILENAME \$realpath_root\$fastcgi_script_name;
         include fastcgi_params;
         fastcgi_hide_header X-Powered-By;
     }
@@ -319,8 +385,6 @@ server {
     }
 }
 NGINX_CONF
-
-sed -i "s|__INSTALL_PATH__|$INSTALL_PATH|g" /etc/nginx/sites-available/vistoria
 
 rm -f /etc/nginx/sites-enabled/default
 ln -sf /etc/nginx/sites-available/vistoria /etc/nginx/sites-enabled/vistoria
@@ -366,17 +430,25 @@ log_info "Criando usuário administrador..."
 
 cd $INSTALL_PATH
 
-php artisan tinker << PHP_TINKER
-\$user = App\Models\User::create([
-    'name' => 'Administrador',
-    'email' => '$ADMIN_EMAIL',
-    'password' => Hash::make('$ADMIN_PASSWORD'),
-]);
-echo "Usuário criado com sucesso!";
-exit();
-PHP_TINKER
+# Usar script PHP direto em vez de tinker (mais confiável em scripts)
+php -r "
+require '${INSTALL_PATH}/vendor/autoload.php';
+\$app = require_once '${INSTALL_PATH}/bootstrap/app.php';
+\$kernel = \$app->make(Illuminate\Contracts\Console\Kernel::class);
+\$kernel->bootstrap();
 
-log_success "Usuário administrador criado"
+\$exists = App\Models\User::where('email', '${ADMIN_EMAIL}')->exists();
+if (!\$exists) {
+    App\Models\User::create([
+        'name'     => 'Administrador',
+        'email'    => '${ADMIN_EMAIL}',
+        'password' => Illuminate\Support\Facades\Hash::make('${ADMIN_PASSWORD}'),
+    ]);
+    echo 'Usuário administrador criado com sucesso!' . PHP_EOL;
+} else {
+    echo 'Usuário já existe, pulando criação.' . PHP_EOL;
+}
+" && log_success "Usuário administrador criado" || log_warning "Não foi possível criar o usuário admin agora. Crie manualmente depois."
 
 ################################################################################
 # RESUMO
