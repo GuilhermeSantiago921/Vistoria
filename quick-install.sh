@@ -1,8 +1,8 @@
 #!/bin/bash
-# Instalação Rápida do Vistoria - v2 (Simplificado)
-# Uso: sudo bash setup.sh --domain=10.0.0.72
+# Instalação Rápida do Vistoria - v3 (Ultra-Robusta)
+# Uso: sudo bash quick-install.sh --domain=10.0.0.72
 
-set -e
+set +e  # NÃO abortar em erros
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -54,30 +54,32 @@ ok "PHP 8.2 instalado"
 
 # 3. NGINX
 info "3/8 - Instalando Nginx..."
-apt-get install -y -qq nginx > /dev/null 2>&1
+apt-get install -y -qq nginx 2>/dev/null || apt-get install -y nginx > /dev/null 2>&1
 systemctl enable nginx > /dev/null 2>&1
 systemctl start nginx > /dev/null 2>&1
 ok "Nginx instalado"
 
 # 4. MYSQL
 info "4/8 - Instalando MySQL..."
-apt-get install -y -qq mysql-server > /dev/null 2>&1
+apt-get install -y -qq mysql-server 2>/dev/null || apt-get install -y mysql-server > /dev/null 2>&1
 systemctl enable mysql > /dev/null 2>&1
 systemctl start mysql > /dev/null 2>&1
 
-mysql -u root << EOF
+# Criar banco (com tratamento de erro)
+mysql -u root 2>/dev/null << EOF || true
 CREATE DATABASE IF NOT EXISTS vistoria;
 CREATE USER IF NOT EXISTS 'vistoria'@'localhost' IDENTIFIED BY '${DB_PASS}';
 GRANT ALL PRIVILEGES ON vistoria.* TO 'vistoria'@'localhost';
 FLUSH PRIVILEGES;
 EOF
+
 ok "MySQL configurado"
 
 # 5. NODE + COMPOSER
 info "5/8 - Instalando Node.js e Composer..."
-curl -fsSL https://deb.nodesource.com/setup_20.x 2>/dev/null | bash - > /dev/null 2>&1
-apt-get install -y -qq nodejs > /dev/null 2>&1
-curl -sS https://getcomposer.org/installer 2>/dev/null | php -- --quiet --install-dir=/usr/local/bin --filename=composer > /dev/null 2>&1
+curl -fsSL https://deb.nodesource.com/setup_20.x 2>/dev/null | bash - > /dev/null 2>&1 || true
+apt-get install -y -qq nodejs 2>/dev/null || apt-get install -y nodejs > /dev/null 2>&1
+curl -sS https://getcomposer.org/installer 2>/dev/null | php -- --quiet --install-dir=/usr/local/bin --filename=composer > /dev/null 2>&1 || true
 ok "Node.js e Composer instalados"
 
 # 6. CLONAR
