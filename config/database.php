@@ -33,20 +33,20 @@ return [
         ], // <-- Fechamento CORRETO do array 'sqlite'
 
         // NOVO: Conexão para o SQL Server Agregados
+        // IMPORTANTE: TrustServerCertificate=1 é necessário pois o servidor usa certificado auto-assinado
         'sqlsrv_agregados' => [
-            'driver' => env('DB_AGREGADOS_CONNECTION', 'sqlsrv'),
-            'url' => 'sqlsrv://' . env('DB_AGREGADOS_USERNAME') . ':' . env('DB_AGREGADOS_PASSWORD') . '@' . env('DB_AGREGADOS_HOST') . ':' . env('DB_AGREGADOS_PORT') . '/' . env('DB_AGREGADOS_DATABASE'),
-            'host' => env('DB_AGREGADOS_HOST'),
+            'driver' => 'sqlsrv',
+            'host' => env('DB_AGREGADOS_HOST', '189.113.13.114'),
             'port' => env('DB_AGREGADOS_PORT', '1433'),
-            'database' => env('DB_AGREGADOS_DATABASE'),
-            'username' => env('DB_AGREGADOS_USERNAME'),
-            'password' => env('DB_AGREGADOS_PASSWORD'),
+            'database' => env('DB_AGREGADOS_DATABASE', 'VeiculosAgregados'),
+            'username' => env('DB_AGREGADOS_USERNAME', 'rodrigo'),
+            'password' => env('DB_AGREGADOS_PASSWORD', ''),
             'charset' => 'utf8',
             'prefix' => '',
             'prefix_indexes' => true,
-            // ODBC/Microsoft driver espera valores de string como 'yes'/'no' — force string defaults
-            'encrypt' => (string) env('DB_AGREGADOS_ENCRYPT', 'no'),
-            'trust_server_certificate' => (string) env('DB_AGREGADOS_TRUST_SERVER_CERTIFICATE', 'no'),
+            // Opções críticas para conexão com certificado auto-assinado
+            'encrypt' => 'no',
+            'trust_server_certificate' => true,
         ], // <-- Esta vírgula é crucial para o próximo bloco 'mysql'
 
         'mysql' => [

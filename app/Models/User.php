@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use App\Models\Vehicle; // <-- NOVO: Importa o modelo Vehicle
+use App\Models\Inspection; // <-- NOVO: Importa o modelo Inspection
 
 class User extends Authenticatable
 {
@@ -57,6 +58,15 @@ class User extends Authenticatable
     {
         // Assume que a chave estrangeira na tabela 'vehicles' é 'user_id'
         return $this->hasMany(Vehicle::class, 'user_id');
+    }
+
+    /**
+     * Define o relacionamento: um analista tem muitas vistorias.
+     * Relacionamento com a tabela inspections via analyst_id.
+     */
+    public function inspections()
+    {
+        return $this->hasMany(Inspection::class, 'analyst_id');
     }
 
     /**

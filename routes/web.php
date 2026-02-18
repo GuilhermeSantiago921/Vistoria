@@ -8,6 +8,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\PhotoController;
+use App\Http\Controllers\DiagnosticoController;
 use App\Http\Middleware\AnalystMiddleware;
 use App\Http\Middleware\CheckPaymentMiddleware;
 use App\Http\Middleware\AdminMiddleware;
@@ -15,11 +16,12 @@ use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
-| Rota de Diagnóstico Temporária
+| Rotas de Diagnóstico SQL Server
 |--------------------------------------------------------------------------
-| Deletar após a correção do driver SQL Server.
+| Rotas para testar conectividade com banco Agregados
 */
-Route::get('/test-db-connection', [InspectionController::class, 'testConnection']);
+Route::get('/test-db-connection', [DiagnosticoController::class, 'testConnection']);
+Route::get('/test-placa/{placa}', [DiagnosticoController::class, 'testPlaca']);
 
 /*
 |--------------------------------------------------------------------------
@@ -97,6 +99,7 @@ Route::middleware(['auth', AdminMiddleware::class])->prefix('admin')->group(func
     Route::get('/users/create', [AdminController::class, 'createUser'])->name('admin.users.create');
     Route::post('/users', [AdminController::class, 'storeUser'])->name('admin.users.store');
     Route::get('/users/{user}', [AdminController::class, 'showUser'])->name('admin.users.show');
+    Route::delete('/users/{user}', [AdminController::class, 'destroyUser'])->name('admin.users.destroy');
     
     // Gerência de Créditos
     Route::get('/credits/manage', [AdminController::class, 'manageCredits'])->name('admin.credits.manage');

@@ -9,13 +9,22 @@ class TrustProxies extends Middleware
 {
     /**
      * The trusted proxies for this application.
+     * 
+     * CLOUDFLARE: Usando '*' para confiar em todos os proxies
+     * Isso é necessário porque o Cloudflare atua como proxy reverso
+     * e envia headers X-Forwarded-* que o Laravel precisa confiar.
      *
      * @var array<int, string>|string|null
      */
-    protected $proxies;
+    protected $proxies = '*';
 
     /**
      * The headers that should be used to detect proxies.
+     * 
+     * Cloudflare envia estes headers:
+     * - CF-Connecting-IP: IP real do visitante
+     * - X-Forwarded-For: Lista de IPs
+     * - X-Forwarded-Proto: http ou https
      *
      * @var int
      */

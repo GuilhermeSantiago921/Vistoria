@@ -32,9 +32,23 @@
                                     @endif
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">{{ $user->created_at->format('d/m/Y') }}</td>
-                                <<td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-    <a href="{{ route('admin.users.show', $user->id) }}" class="text-indigo-600 hover:text-indigo-900">Ver Perfil</a>
-</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-3">
+                                    <a href="{{ route('admin.users.show', $user->id) }}" class="text-indigo-600 hover:text-indigo-900">
+                                        Ver Perfil
+                                    </a>
+                                    
+                                    @if($user->id !== auth()->id())
+                                        <form action="{{ route('admin.users.destroy', $user->id) }}" method="POST" class="inline-block" onsubmit="return confirm('⚠️ Tem certeza que deseja excluir o usuário {{ $user->name }}?\n\nEsta ação não pode ser desfeita e irá remover:\n• Todos os veículos cadastrados\n• Todas as vistorias realizadas\n• Todas as fotos e documentos\n\nDeseja continuar?');">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="text-red-600 hover:text-red-900 font-medium">
+                                                Excluir
+                                            </button>
+                                        </form>
+                                    @else
+                                        <span class="text-gray-400 italic text-xs">(Você)</span>
+                                    @endif
+                                </td>
                             </tr>
                         @endforeach
                     </tbody>

@@ -252,4 +252,74 @@ class AdminController extends Controller
 
         return view('admin.credits.history', compact('clients'));
     }
+
+    /**
+     * Remove um usuário do sistema.
+     * 
+     * Inclui proteções para:
+     * - Não excluir o próprio usuário logado
+     * - Excluir em cascata os veículos e vistorias associados
+     * - Registrar log da exclusão para auditoria
+     *
+     * @param  \App\Models\User  $user
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function destroyUser(User $user)
+    {
+        try {
+            // Proteção: Não permite que o admin exclua a si mesmo
+            if ($user->id === auth()->id()) {
+                return back()->with('error', '❌ Você não pode excluir sua própria conta.');
+            }
+
+            // Armazenar informações para o log antes de excluir
+            $userName = $user->name;
+            $userEmail = $user->email;
+            $userRole = $user->role;
+            $userId = $user->id;
+
+            // Contar recursos relacionados antes da exclusão
+            $vehicleCount = $user->vehicles()->count();
+            $inspectionCount = 0;
+            
+            if ($user->role === 'client') {
+                $inspectionCount = $user->vehicles()->withCount('inspections')->get()->sum('inspections_count');
+            } elseif ($user->role === 'analyst') {
+                $inspectionCount = $user->inspections()->count();
+            }
+
+            // Deletar o usuário (as exclusões em cascata são gerenciadas pelas migrations)
+            $user->delete();
+
+            // Log da exclusão para auditoria
+            \Log::warning('Usuário excluído pelo administrador', [
+                'admin_id' => auth()->id(),
+                'admin_name' => auth()->user()->name,
+                'deleted_user_id' => $userId,
+                'deleted_user_name' => $userName,
+                'deleted_user_email' => $userEmail,
+                'deleted_user_role' => $userRole,
+                'vehicles_deleted' => $vehicleCount,
+                'inspections_affected' => $inspectionCount,
+                'timestamp' => now()
+            ]);
+
+            $message = "✅ Usuário '{$userName}' excluído com sucesso.";
+            
+            if ($vehicleCount > 0 || $inspectionCount > 0) {
+                $message .= " Foram removidos {$vehicleCount} veículo(s) e {$inspectionCount} vistoria(s) associada(s).";
+            }
+
+            return redirect()->route('admin.users.index')->with('success', $message);
+            
+        } catch (\Exception $e) {
+            \Log::error('Erro ao excluir usuário', [
+                'error' => $e->getMessage(),
+                'admin_id' => auth()->id(),
+                'user_id' => $user->id
+            ]);
+            
+            return back()->with('error', '❌ Erro ao excluir usuário. Tente novamente.');
+        }
+    }
 }
