@@ -202,16 +202,34 @@ passo "Verificando Banco de Dados"
 executar systemctl start mysql
 executar systemctl enable mysql
 
+# Verificar se a senha root está correta antes de continuar
+if ! mysql -u root -p"${MYSQL_ROOT_PASSWORD}" -e "SELECT 1;" >> "$LOG_FILE" 2>&1; then
+    erro "Senha root do MySQL incorreta. Execute novamente e informe a senha correta."
+fi
+
+# Criar banco de dados
 mysql -u root -p"${MYSQL_ROOT_PASSWORD}" \
     -e "CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" \
-    >> "$LOG_FILE" 2>&1 || erro "Falha ao criar banco. Senha root correta?"
+    >> "$LOG_FILE" 2>&1 || erro "Falha ao criar banco de dados"
+
+# Recriar usuário sempre — DROP + CREATE garante senha e permissões corretas.
+# "CREATE USER IF NOT EXISTS" não atualiza a senha se o usuário já existir.
 mysql -u root -p"${MYSQL_ROOT_PASSWORD}" \
-    -e "CREATE USER IF NOT EXISTS '${DB_USER}'@'localhost' IDENTIFIED BY '${DB_PASSWORD}';" \
+    -e "DROP USER IF EXISTS '${DB_USER}'@'localhost';" \
     >> "$LOG_FILE" 2>&1 || true
 mysql -u root -p"${MYSQL_ROOT_PASSWORD}" \
+    -e "CREATE USER '${DB_USER}'@'localhost' IDENTIFIED BY '${DB_PASSWORD}';" \
+    >> "$LOG_FILE" 2>&1 || erro "Falha ao criar usuário MySQL"
+mysql -u root -p"${MYSQL_ROOT_PASSWORD}" \
     -e "GRANT ALL PRIVILEGES ON \`${DB_NAME}\`.* TO '${DB_USER}'@'localhost'; FLUSH PRIVILEGES;" \
-    >> "$LOG_FILE" 2>&1 || erro "Falha ao configurar usuário MySQL"
-ok "Banco de dados verificado"
+    >> "$LOG_FILE" 2>&1 || erro "Falha ao conceder privilégios"
+
+# Confirmar que o acesso com o novo usuário funciona
+if ! mysql -u "${DB_USER}" -p"${DB_PASSWORD}" -e "USE \`${DB_NAME}\`;" >> "$LOG_FILE" 2>&1; then
+    erro "Usuário '${DB_USER}' criado mas sem acesso ao banco '${DB_NAME}' — verifique: $LOG_FILE"
+fi
+
+ok "Banco de dados e usuário verificados"
 
 # ── 3. Clonar repositório ────────────────────────────────────────────────────
 passo "Baixando Sistema do GitHub"

@@ -484,7 +484,10 @@ configurar_banco_dados() {
     ok "Banco de dados criado"
 
     info "Criando usuário '$DB_USER'..."
-    executar_mysql "CREATE USER IF NOT EXISTS '${DB_USER}'@'localhost' IDENTIFIED BY '${DB_PASSWORD}';"
+    # DROP + CREATE garante que a senha informada seja sempre aplicada.
+    # "CREATE USER IF NOT EXISTS" não atualiza a senha se o usuário já existir.
+    executar_mysql "DROP USER IF EXISTS '${DB_USER}'@'localhost';"
+    executar_mysql "CREATE USER '${DB_USER}'@'localhost' IDENTIFIED BY '${DB_PASSWORD}';"
     executar_mysql "GRANT ALL PRIVILEGES ON \`${DB_NAME}\`.* TO '${DB_USER}'@'localhost';"
     executar_mysql "FLUSH PRIVILEGES;"
     ok "Usuário criado e permissões concedidas"
