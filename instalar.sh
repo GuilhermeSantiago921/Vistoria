@@ -483,13 +483,21 @@ configurar_banco_dados() {
     executar_mysql "CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
     ok "Banco de dados criado"
 
-    info "Criando usuário '$DB_USER'..."
-    # DROP + CREATE garante que a senha informada seja sempre aplicada.
-    # "CREATE USER IF NOT EXISTS" não atualiza a senha se o usuário já existir.
-    executar_mysql "DROP USER IF EXISTS '${DB_USER}'@'localhost';"
-    executar_mysql "CREATE USER '${DB_USER}'@'localhost' IDENTIFIED BY '${DB_PASSWORD}';"
+    info "Configurando usuário '$DB_USER'..."
+    
+    # Primeiro, tentar ALTER USER se o usuário já existir
+    mysql -u root -p"${MYSQL_ROOT_PASSWORD}" \
+        -e "ALTER USER '${DB_USER}'@'localhost' IDENTIFIED BY '${DB_PASSWORD}';" \
+        >> "$LOG_FILE" 2>&1 || {
+            # Se ALTER falhar (usuário não existe), criar novo
+            info "Usuário não existe, criando novo..."
+            executar_mysql "CREATE USER '${DB_USER}'@'localhost' IDENTIFIED BY '${DB_PASSWORD}';"
+        }
+    
+    # Garantir privilégios
     executar_mysql "GRANT ALL PRIVILEGES ON \`${DB_NAME}\`.* TO '${DB_USER}'@'localhost';"
     executar_mysql "FLUSH PRIVILEGES;"
+    
     ok "Usuário criado e permissões concedidas"
 }
 

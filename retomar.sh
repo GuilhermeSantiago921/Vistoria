@@ -203,31 +203,62 @@ executar systemctl start mysql
 executar systemctl enable mysql
 
 # Verificar se a senha root está correta antes de continuar
+info "Verificando acesso root ao MySQL..."
 if ! mysql -u root -p"${MYSQL_ROOT_PASSWORD}" -e "SELECT 1;" >> "$LOG_FILE" 2>&1; then
     erro "Senha root do MySQL incorreta. Execute novamente e informe a senha correta."
 fi
+ok "Acesso root confirmado"
 
 # Criar banco de dados
+info "Criando banco de dados '${DB_NAME}'..."
 mysql -u root -p"${MYSQL_ROOT_PASSWORD}" \
     -e "CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" \
     >> "$LOG_FILE" 2>&1 || erro "Falha ao criar banco de dados"
+ok "Banco de dados criado"
 
-# Recriar usuário sempre — DROP + CREATE garante senha e permissões corretas.
-# "CREATE USER IF NOT EXISTS" não atualiza a senha se o usuário já existir.
+# Configurar usuário com múltiplas tentativas para garantir
+info "Configurando usuário '${DB_USER}'..."
+
+# Primeiro, tentar ALTER USER se o usuário já existir
 mysql -u root -p"${MYSQL_ROOT_PASSWORD}" \
-    -e "DROP USER IF EXISTS '${DB_USER}'@'localhost';" \
-    >> "$LOG_FILE" 2>&1 || true
+    -e "ALTER USER '${DB_USER}'@'localhost' IDENTIFIED BY '${DB_PASSWORD}';" \
+    >> "$LOG_FILE" 2>&1 || {
+        # Se ALTER falhar (usuário não existe), criar novo
+        info "Usuário não existe, criando novo..."
+        mysql -u root -p"${MYSQL_ROOT_PASSWORD}" \
+            -e "CREATE USER '${DB_USER}'@'localhost' IDENTIFIED BY '${DB_PASSWORD}';" \
+            >> "$LOG_FILE" 2>&1 || erro "Falha ao criar usuário MySQL"
+    }
+
+# Garantir privilégios
 mysql -u root -p"${MYSQL_ROOT_PASSWORD}" \
-    -e "CREATE USER '${DB_USER}'@'localhost' IDENTIFIED BY '${DB_PASSWORD}';" \
-    >> "$LOG_FILE" 2>&1 || erro "Falha ao criar usuário MySQL"
-mysql -u root -p"${MYSQL_ROOT_PASSWORD}" \
-    -e "GRANT ALL PRIVILEGES ON \`${DB_NAME}\`.* TO '${DB_USER}'@'localhost'; FLUSH PRIVILEGES;" \
+    -e "GRANT ALL PRIVILEGES ON \`${DB_NAME}\`.* TO '${DB_USER}'@'localhost';" \
     >> "$LOG_FILE" 2>&1 || erro "Falha ao conceder privilégios"
 
-# Confirmar que o acesso com o novo usuário funciona
-if ! mysql -u "${DB_USER}" -p"${DB_PASSWORD}" -e "USE \`${DB_NAME}\`;" >> "$LOG_FILE" 2>&1; then
-    erro "Usuário '${DB_USER}' criado mas sem acesso ao banco '${DB_NAME}' — verifique: $LOG_FILE"
-fi
+# Flush múltiplas vezes para garantir
+mysql -u root -p"${MYSQL_ROOT_PASSWORD}" \
+    -e "FLUSH PRIVILEGES;" \
+    >> "$LOG_FILE" 2>&1 || erro "Falha no FLUSH PRIVILEGES"
+
+# Aguardar um pouco para o MySQL processar
+sleep 2
+
+# Testar conexão múltiplas vezes
+info "Testando acesso do usuário ao banco..."
+for i in {1..5}; do
+    if mysql -u "${DB_USER}" -p"${DB_PASSWORD}" -e "USE \`${DB_NAME}\`; SELECT 1;" >> "$LOG_FILE" 2>&1; then
+        ok "Usuário '${DB_USER}' tem acesso ao banco '${DB_NAME}'"
+        break
+    else
+        if [[ $i -eq 5 ]]; then
+            erro "Usuário '${DB_USER}' criado mas sem acesso ao banco '${DB_NAME}' após 5 tentativas — verifique: $LOG_FILE"
+        fi
+        info "Tentativa $i falhou, tentando novamente em 2s..."
+        sleep 2
+        # Mais um flush por segurança
+        mysql -u root -p"${MYSQL_ROOT_PASSWORD}" -e "FLUSH PRIVILEGES;" >> "$LOG_FILE" 2>&1 || true
+    fi
+done
 
 ok "Banco de dados e usuário verificados"
 
