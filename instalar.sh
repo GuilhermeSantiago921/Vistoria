@@ -140,6 +140,11 @@ verificar_recursos() {
 # ─── Coleta de informações ────────────────────────────────────────────────────
 
 coletar_informacoes() {
+    # ── Garantir leitura pelo terminal mesmo via curl | bash ──────────────────
+    # Quando executado via "curl | bash", o stdin é o pipe, não o terminal.
+    # Redirecionar explicitamente para /dev/tty resolve o problema.
+    exec < /dev/tty
+
     passo "Configuração do Sistema"
     echo ""
     echo -e "  ${AMARELO}Preencha as informações abaixo para configurar o sistema.${RESET}"
@@ -147,23 +152,25 @@ coletar_informacoes() {
     echo ""
 
     # ── URL da aplicação ──
+    local IP_PADRAO
+    IP_PADRAO=$(hostname -I 2>/dev/null | awk '{print $1}')
     echo -e "  ${NEGRITO}1. URL de acesso ao sistema:${RESET}"
     echo -e "     Exemplos: http://meusite.com.br  |  http://192.168.1.100"
-    read -rp "     URL [http://$(hostname -I | awk '{print $1}')]: " APP_URL
-    APP_URL="${APP_URL:-http://$(hostname -I | awk '{print $1}')}"
+    read -rp "     URL [http://${IP_PADRAO}]: " APP_URL </dev/tty
+    APP_URL="${APP_URL:-http://${IP_PADRAO}}"
     echo ""
 
     # ── Banco de dados ──
     echo -e "  ${NEGRITO}2. Configuração do Banco de Dados MySQL:${RESET}"
     echo ""
-    
+
     while true; do
-        read -rsp "     Senha para o usuário ROOT do MySQL: " MYSQL_ROOT_PASSWORD
+        read -rsp "     Senha para o usuário ROOT do MySQL: " MYSQL_ROOT_PASSWORD </dev/tty
         echo ""
         if [[ -z "$MYSQL_ROOT_PASSWORD" ]]; then
             echo -e "     ${VERMELHO}A senha não pode ser vazia.${RESET}"
         else
-            read -rsp "     Confirme a senha root: " ROOT_CONFIRM
+            read -rsp "     Confirme a senha root: " ROOT_CONFIRM </dev/tty
             echo ""
             if [[ "$MYSQL_ROOT_PASSWORD" == "$ROOT_CONFIRM" ]]; then
                 break
@@ -173,19 +180,19 @@ coletar_informacoes() {
         fi
     done
 
-    read -rp "     Nome do banco de dados [vistoria]: " DB_NAME
+    read -rp "     Nome do banco de dados [vistoria]: " DB_NAME </dev/tty
     DB_NAME="${DB_NAME:-vistoria}"
 
-    read -rp "     Nome do usuário do banco [vistoria_user]: " DB_USER
+    read -rp "     Nome do usuário do banco [vistoria_user]: " DB_USER </dev/tty
     DB_USER="${DB_USER:-vistoria_user}"
 
     while true; do
-        read -rsp "     Senha do usuário do banco: " DB_PASSWORD
+        read -rsp "     Senha do usuário do banco: " DB_PASSWORD </dev/tty
         echo ""
         if [[ -z "$DB_PASSWORD" ]]; then
             echo -e "     ${VERMELHO}A senha não pode ser vazia.${RESET}"
         else
-            read -rsp "     Confirme a senha do banco: " DB_CONFIRM
+            read -rsp "     Confirme a senha do banco: " DB_CONFIRM </dev/tty
             echo ""
             if [[ "$DB_PASSWORD" == "$DB_CONFIRM" ]]; then
                 break
@@ -199,12 +206,12 @@ coletar_informacoes() {
     # ── Administrador ──
     echo -e "  ${NEGRITO}3. Conta de Administrador do Sistema:${RESET}"
     echo ""
-    
-    read -rp "     Nome completo do administrador [Administrador]: " ADMIN_NAME
+
+    read -rp "     Nome completo do administrador [Administrador]: " ADMIN_NAME </dev/tty
     ADMIN_NAME="${ADMIN_NAME:-Administrador}"
 
     while true; do
-        read -rp "     E-mail do administrador [admin@vistoria.com.br]: " ADMIN_EMAIL
+        read -rp "     E-mail do administrador [admin@vistoria.com.br]: " ADMIN_EMAIL </dev/tty
         ADMIN_EMAIL="${ADMIN_EMAIL:-admin@vistoria.com.br}"
         if [[ "$ADMIN_EMAIL" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; then
             break
@@ -214,12 +221,12 @@ coletar_informacoes() {
     done
 
     while true; do
-        read -rsp "     Senha do administrador (mínimo 8 caracteres): " ADMIN_PASSWORD
+        read -rsp "     Senha do administrador (mínimo 8 caracteres): " ADMIN_PASSWORD </dev/tty
         echo ""
         if [[ ${#ADMIN_PASSWORD} -lt 8 ]]; then
             echo -e "     ${VERMELHO}Senha muito curta. Mínimo 8 caracteres.${RESET}"
         else
-            read -rsp "     Confirme a senha do administrador: " ADMIN_CONFIRM
+            read -rsp "     Confirme a senha do administrador: " ADMIN_CONFIRM </dev/tty
             echo ""
             if [[ "$ADMIN_PASSWORD" == "$ADMIN_CONFIRM" ]]; then
                 break
@@ -243,7 +250,7 @@ coletar_informacoes() {
     echo -e "  └─────────────────────────────────────────────────────────┘${RESET}"
     echo ""
 
-    read -rp "  Confirmar e iniciar instalação? [S/n]: " CONFIRMAR
+    read -rp "  Confirmar e iniciar instalação? [S/n]: " CONFIRMAR </dev/tty
     if [[ "$CONFIRMAR" =~ ^[Nn]$ ]]; then
         echo "Instalação cancelada."
         exit 0
