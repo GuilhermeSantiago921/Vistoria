@@ -12,6 +12,12 @@
 
 set -e
 
+# ── Redirecionar stdin para o terminal IMEDIATAMENTE ─────────────────────────
+# Isso deve ser feito antes de qualquer coisa, pois quando o script é
+# executado via "curl | bash" o stdin é o pipe do curl (já fechado).
+# Forçar /dev/tty garante que todos os "read" funcionem corretamente.
+exec < /dev/tty
+
 VERMELHO='\033[0;31m'
 VERDE='\033[0;32m'
 AMARELO='\033[1;33m'
@@ -58,7 +64,6 @@ echo -e "  ${CIANO}Log:${RESET} $LOG_FILE"
 echo ""
 
 # ── Coletar informações necessárias ──────────────────────────────────────────
-exec < /dev/tty
 
 passo "Informações Necessárias para Retomar"
 echo ""
