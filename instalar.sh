@@ -7,10 +7,10 @@
 # Requisitos: Mínimo 1GB RAM, 10GB disco livre
 #
 # INSTALAÇÃO RÁPIDA (uma linha):
-#   curl -fsSL https://raw.githubusercontent.com/GuilhermeSantiago921/vistoria/main/instalar.sh | sudo bash
+#   curl -fsSL https://raw.githubusercontent.com/GuilhermeSantiago921/Vistoria/main/instalar.sh | sudo bash
 #
 # OU baixar e executar:
-#   wget https://raw.githubusercontent.com/GuilhermeSantiago921/vistoria/main/instalar.sh
+#   wget https://raw.githubusercontent.com/GuilhermeSantiago921/Vistoria/main/instalar.sh
 #   sudo bash instalar.sh
 # =============================================================================
 
@@ -30,7 +30,7 @@ RESET='\033[0m'
 LOG_FILE="/tmp/vistoria-install-$(date +%Y%m%d_%H%M%S).log"
 INSTALL_DIR="/var/www/vistoria"
 PHP_VERSION="8.2"
-GITHUB_REPO="GuilhermeSantiago921/vistoria"
+GITHUB_REPO="GuilhermeSantiago921/Vistoria"
 GITHUB_BRANCH="main"
 MYSQL_ROOT_PASSWORD=""
 DB_NAME="vistoria"
@@ -50,7 +50,7 @@ imprimir_cabecalho() {
     echo "  ╔══════════════════════════════════════════════════════════════╗"
     echo "  ║          🚗  SISTEMA DE VISTORIA VEICULAR                   ║"
     echo "  ║               Instalador Automático v2.0                    ║"
-    echo "  ║         github.com/GuilhermeSantiago921/vistoria             ║"
+    echo "  ║         github.com/GuilhermeSantiago921/Vistoria             ║"
     echo "  ╚══════════════════════════════════════════════════════════════╝"
     echo -e "${RESET}"
     echo -e "  ${CIANO}Logs salvos em:${RESET} $LOG_FILE"
