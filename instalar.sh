@@ -502,21 +502,17 @@ clonar_repositorio() {
     fi
 
     if [[ -d "${INSTALL_DIR}/.git" ]]; then
-        info "Repositório já existe. Atualizando para a versão mais recente..."
-        cd "$INSTALL_DIR"
-        executar git fetch origin
-        executar git reset --hard "origin/${GITHUB_BRANCH}"
-        ok "Código atualizado do GitHub"
-    else
-        info "Clonando repositório: github.com/${GITHUB_REPO}..."
+        info "Repositório já existe. Removendo para instalação limpa..."
         rm -rf "$INSTALL_DIR"
-        executar git clone \
-            --depth=1 \
-            --branch "$GITHUB_BRANCH" \
-            "https://github.com/${GITHUB_REPO}.git" \
-            "$INSTALL_DIR"
-        ok "Repositório clonado com sucesso"
     fi
+
+    info "Clonando repositório: github.com/${GITHUB_REPO}..."
+    git clone \
+        --depth=1 \
+        --branch "$GITHUB_BRANCH" \
+        "https://github.com/${GITHUB_REPO}.git" \
+        "$INSTALL_DIR" >> "$LOG_FILE" 2>&1 || erro "Falha no git clone — verifique: $LOG_FILE"
+    ok "Repositório clonado com sucesso"
 
     cd "$INSTALL_DIR"
 }

@@ -213,19 +213,26 @@ mysql -u root -p"${MYSQL_ROOT_PASSWORD}" \
     >> "$LOG_FILE" 2>&1 || erro "Falha ao configurar usuário MySQL"
 ok "Banco de dados verificado"
 
-# ── 3. Clonar/atualizar repositório ──────────────────────────────────────────
+# ── 3. Clonar repositório ────────────────────────────────────────────────────
 passo "Baixando Sistema do GitHub"
-if [[ -d "${INSTALL_DIR}/.git" ]]; then
-    info "Atualizando repositório existente..."
-    cd "$INSTALL_DIR"
-    executar git fetch origin
-    executar git reset --hard "origin/${GITHUB_BRANCH}"
-else
-    info "Clonando de github.com/${GITHUB_REPO}..."
-    rm -rf "$INSTALL_DIR"
-    executar git clone --depth=1 --branch "$GITHUB_BRANCH" \
-        "https://github.com/${GITHUB_REPO}.git" "$INSTALL_DIR"
+
+# Verificar conectividade com o GitHub antes de tentar
+info "Verificando conectividade com GitHub..."
+if ! curl -fsSL --max-time 10 "https://github.com" > /dev/null 2>&1; then
+    erro "Sem acesso ao GitHub. Verifique a conexão com a internet."
 fi
+ok "GitHub acessível"
+
+# Sempre remover e clonar de novo — garante instalação limpa e evita
+# problemas com repositório parcialmente clonado ou remote inválido.
+info "Removendo instalação anterior (se houver)..."
+rm -rf "$INSTALL_DIR"
+
+info "Clonando de github.com/${GITHUB_REPO}..."
+git clone --depth=1 --branch "$GITHUB_BRANCH" \
+    "https://github.com/${GITHUB_REPO}.git" \
+    "$INSTALL_DIR" >> "$LOG_FILE" 2>&1 || erro "Falha no git clone — verifique: $LOG_FILE"
+
 ok "Código baixado com sucesso"
 
 # ── 4. Configurar .env ────────────────────────────────────────────────────────
