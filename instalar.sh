@@ -360,7 +360,20 @@ instalar_nodejs() {
 
 instalar_nginx() {
     passo "Instalando e Configurando Nginx"
+
+    # ── Parar e desabilitar Apache se estiver instalado ───────────────────────
+    if systemctl is-active --quiet apache2 2>/dev/null; then
+        info "Apache2 detectado e rodando. Parando para liberar a porta 80..."
+        executar systemctl stop apache2
+        executar systemctl disable apache2
+        ok "Apache2 parado e desabilitado"
+    elif command -v apache2 &>/dev/null; then
+        aviso "Apache2 instalado mas parado — desabilitando para não conflitar..."
+        executar systemctl disable apache2 || true
+    fi
+
     if ! command -v nginx &>/dev/null; then
+        info "Instalando Nginx..."
         executar apt-get install -y nginx
         ok "Nginx instalado"
     else
@@ -413,14 +426,15 @@ NGINXCONF
     # Substituir a versão do PHP no config
     sed -i "s/phpVERSION/php${PHP_VERSION}/" /etc/nginx/sites-available/vistoria
 
-    # Ativar o site
+    # Ativar o site e remover o default
     ln -sf /etc/nginx/sites-available/vistoria /etc/nginx/sites-enabled/vistoria
     rm -f /etc/nginx/sites-enabled/default
 
     # Testar config
-    nginx -t >> "$LOG_FILE" 2>&1 || erro "Configuração do Nginx inválida"
-    executar systemctl restart nginx
+    nginx -t >> "$LOG_FILE" 2>&1 || erro "Configuração do Nginx inválida — verifique: $LOG_FILE"
+
     executar systemctl enable nginx
+    executar systemctl restart nginx
     ok "Nginx configurado e iniciado"
 }
 
