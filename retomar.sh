@@ -4,19 +4,34 @@
 # 🔄 SISTEMA DE VISTORIA VEICULAR - SCRIPT DE RETOMADA
 # =============================================================================
 # Use este script quando a instalação parou no meio.
-# Ele continua a partir do ponto onde parou (Nginx já ok, MySQL já ok).
 #
-# USO:
+# USO RECOMENDADO (baixar e executar - mais confiável):
+#   wget -O retomar.sh https://raw.githubusercontent.com/GuilhermeSantiago921/Vistoria/main/retomar.sh
 #   sudo bash retomar.sh
+#
+# OU via pipe (também funciona):
+#   curl -fsSL https://raw.githubusercontent.com/GuilhermeSantiago921/Vistoria/main/retomar.sh | sudo bash
 # =============================================================================
 
 set -e
 
-# ── Redirecionar stdin para o terminal IMEDIATAMENTE ─────────────────────────
-# Isso deve ser feito antes de qualquer coisa, pois quando o script é
-# executado via "curl | bash" o stdin é o pipe do curl (já fechado).
-# Forçar /dev/tty garante que todos os "read" funcionem corretamente.
-exec < /dev/tty
+# ── Abrir /dev/tty como file descriptor 3 ────────────────────────────────────
+# Esta é a técnica mais robusta para leitura interativa.
+# Funciona tanto em execução direta quanto via "curl | bash" ou "bash <(curl)".
+# exec </dev/tty pode falhar em bash em modo pipe no Ubuntu 22.04+
+# Usar fd 3 é garantido em todas as versões.
+if ! exec 3</dev/tty 2>/dev/null; then
+    echo "ERRO: Não foi possível abrir o terminal para entrada interativa."
+    echo ""
+    echo "Use o método recomendado:"
+    echo "  wget -O retomar.sh https://raw.githubusercontent.com/GuilhermeSantiago921/Vistoria/main/retomar.sh"
+    echo "  sudo bash retomar.sh"
+    exit 1
+fi
+
+# Função auxiliar de leitura — usa fd 3 (terminal direto)
+ler()  { read -r  "$@" <&3; }
+lersp(){ read -rs "$@" <&3; }
 
 VERMELHO='\033[0;31m'
 VERDE='\033[0;32m'
@@ -64,36 +79,79 @@ echo -e "  ${CIANO}Log:${RESET} $LOG_FILE"
 echo ""
 
 # ── Coletar informações necessárias ──────────────────────────────────────────
-
-passo "Informações Necessárias para Retomar"
+passo "Informações para Configuração"
+echo ""
+echo -e "  ${AMARELO}Preencha os dados abaixo. ENTER = valor padrão [entre colchetes].${RESET}"
 echo ""
 
 local_IP=$(hostname -I 2>/dev/null | awk '{print $1}')
-read -rp "  URL do sistema [http://${local_IP}]: " APP_URL </dev/tty
+
+# URL
+echo -ne "  URL do sistema [http://${local_IP}]: "
+ler APP_URL
 APP_URL="${APP_URL:-http://${local_IP}}"
 
 echo ""
-read -rsp "  Senha ROOT do MySQL: " MYSQL_ROOT_PASSWORD </dev/tty
-echo ""
-read -rp "  Nome do banco [vistoria]: " DB_NAME </dev/tty
-DB_NAME="${DB_NAME:-vistoria}"
-read -rp "  Usuário do banco [vistoria_user]: " DB_USER </dev/tty
-DB_USER="${DB_USER:-vistoria_user}"
-read -rsp "  Senha do usuário do banco: " DB_PASSWORD </dev/tty
-echo ""
+echo -e "  ${NEGRITO}── Banco de Dados MySQL ──────────────────────────────${RESET}"
+
+# Senha root
+while true; do
+    echo -ne "  Senha ROOT do MySQL: "
+    lersp MYSQL_ROOT_PASSWORD; echo ""
+    [[ -n "$MYSQL_ROOT_PASSWORD" ]] && break
+    echo -e "  ${VERMELHO}Senha não pode ser vazia.${RESET}"
+done
+
+echo -ne "  Nome do banco [vistoria]: "
+ler DB_NAME; DB_NAME="${DB_NAME:-vistoria}"
+
+echo -ne "  Usuário do banco [vistoria_user]: "
+ler DB_USER; DB_USER="${DB_USER:-vistoria_user}"
+
+while true; do
+    echo -ne "  Senha do usuário do banco: "
+    lersp DB_PASSWORD; echo ""
+    [[ -n "$DB_PASSWORD" ]] && break
+    echo -e "  ${VERMELHO}Senha não pode ser vazia.${RESET}"
+done
 
 echo ""
-read -rp "  Nome do administrador [Administrador]: " ADMIN_NAME </dev/tty
-ADMIN_NAME="${ADMIN_NAME:-Administrador}"
-read -rp "  E-mail do administrador [admin@vistoria.com.br]: " ADMIN_EMAIL </dev/tty
-ADMIN_EMAIL="${ADMIN_EMAIL:-admin@vistoria.com.br}"
-read -rsp "  Senha do administrador: " ADMIN_PASSWORD </dev/tty
-echo ""
+echo -e "  ${NEGRITO}── Administrador do Sistema ──────────────────────────${RESET}"
 
+echo -ne "  Nome do administrador [Administrador]: "
+ler ADMIN_NAME; ADMIN_NAME="${ADMIN_NAME:-Administrador}"
+
+while true; do
+    echo -ne "  E-mail do administrador [admin@vistoria.com.br]: "
+    ler ADMIN_EMAIL; ADMIN_EMAIL="${ADMIN_EMAIL:-admin@vistoria.com.br}"
+    [[ "$ADMIN_EMAIL" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]] && break
+    echo -e "  ${VERMELHO}E-mail inválido.${RESET}"
+done
+
+while true; do
+    echo -ne "  Senha do administrador (mín. 8 caracteres): "
+    lersp ADMIN_PASSWORD; echo ""
+    [[ ${#ADMIN_PASSWORD} -ge 8 ]] && break
+    echo -e "  ${VERMELHO}Senha muito curta (mínimo 8 caracteres).${RESET}"
+done
+
+# Confirmação
 echo ""
-echo -e "${AMARELO}  Retomando com: URL=${BRANCO}${APP_URL}${AMARELO}  BD=${BRANCO}${DB_NAME}${AMARELO}  Admin=${BRANCO}${ADMIN_EMAIL}${RESET}"
-read -rp "  Confirmar? [S/n]: " OK </dev/tty
-[[ "$OK" =~ ^[Nn]$ ]] && exit 0
+echo -e "${AMARELO}  ┌─────────────────────────────────────────────────────────┐"
+echo -e "  │              RESUMO DA CONFIGURAÇÃO                       │"
+echo -e "  ├─────────────────────────────────────────────────────────┤"
+echo -e "  │  URL:          ${BRANCO}${APP_URL}${AMARELO}"
+echo -e "  │  Banco:        ${BRANCO}${DB_NAME}${AMARELO}  Usuário: ${BRANCO}${DB_USER}${AMARELO}"
+echo -e "  │  Admin:        ${BRANCO}${ADMIN_EMAIL}${AMARELO}"
+echo -e "  │  Diretório:    ${BRANCO}${INSTALL_DIR}${AMARELO}"
+echo -e "  └─────────────────────────────────────────────────────────┘${RESET}"
+echo ""
+echo -ne "  Confirmar e iniciar? [S/n]: "
+ler CONFIRMAR
+[[ "$CONFIRMAR" =~ ^[Nn]$ ]] && { echo "Cancelado."; exit 0; }
+
+# Fechar fd 3 — não precisamos mais de leitura interativa
+exec 3>&-
 
 # ── 1. Garantir Nginx ok ──────────────────────────────────────────────────────
 passo "Verificando Nginx"
@@ -134,7 +192,7 @@ NGINXEOF
 
 ln -sf /etc/nginx/sites-available/vistoria /etc/nginx/sites-enabled/vistoria
 rm -f /etc/nginx/sites-enabled/default
-nginx -t >> "$LOG_FILE" 2>&1 || erro "Config Nginx inválida"
+nginx -t >> "$LOG_FILE" 2>&1 || erro "Config Nginx inválida — verifique: $LOG_FILE"
 executar systemctl enable nginx
 executar systemctl restart nginx
 ok "Nginx configurado e rodando"
@@ -144,16 +202,16 @@ passo "Verificando Banco de Dados"
 executar systemctl start mysql
 executar systemctl enable mysql
 
-mysql -u root -p"${MYSQL_ROOT_PASSWORD}" -e \
-    "CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" \
-    >> "$LOG_FILE" 2>&1 || erro "Falha ao criar banco"
-mysql -u root -p"${MYSQL_ROOT_PASSWORD}" -e \
-    "CREATE USER IF NOT EXISTS '${DB_USER}'@'localhost' IDENTIFIED BY '${DB_PASSWORD}';" \
+mysql -u root -p"${MYSQL_ROOT_PASSWORD}" \
+    -e "CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" \
+    >> "$LOG_FILE" 2>&1 || erro "Falha ao criar banco. Senha root correta?"
+mysql -u root -p"${MYSQL_ROOT_PASSWORD}" \
+    -e "CREATE USER IF NOT EXISTS '${DB_USER}'@'localhost' IDENTIFIED BY '${DB_PASSWORD}';" \
     >> "$LOG_FILE" 2>&1 || true
-mysql -u root -p"${MYSQL_ROOT_PASSWORD}" -e \
-    "GRANT ALL PRIVILEGES ON \`${DB_NAME}\`.* TO '${DB_USER}'@'localhost'; FLUSH PRIVILEGES;" \
-    >> "$LOG_FILE" 2>&1 || erro "Falha ao configurar usuário"
-ok "Banco de dados e usuário verificados"
+mysql -u root -p"${MYSQL_ROOT_PASSWORD}" \
+    -e "GRANT ALL PRIVILEGES ON \`${DB_NAME}\`.* TO '${DB_USER}'@'localhost'; FLUSH PRIVILEGES;" \
+    >> "$LOG_FILE" 2>&1 || erro "Falha ao configurar usuário MySQL"
+ok "Banco de dados verificado"
 
 # ── 3. Clonar/atualizar repositório ──────────────────────────────────────────
 passo "Baixando Sistema do GitHub"
@@ -168,10 +226,10 @@ else
     executar git clone --depth=1 --branch "$GITHUB_BRANCH" \
         "https://github.com/${GITHUB_REPO}.git" "$INSTALL_DIR"
 fi
-ok "Código baixado"
+ok "Código baixado com sucesso"
 
 # ── 4. Configurar .env ────────────────────────────────────────────────────────
-passo "Gerando .env"
+passo "Gerando arquivo .env"
 APP_KEY="base64:$(openssl rand -base64 32)"
 cat > "${INSTALL_DIR}/.env" << ENVEOF
 APP_NAME="Vistoria Veicular"
@@ -207,22 +265,22 @@ MAIL_MAILER=log
 MAIL_FROM_ADDRESS=noreply@vistoria.com.br
 MAIL_FROM_NAME="Vistoria Veicular"
 ENVEOF
-ok ".env criado"
+ok "Arquivo .env criado"
 
 # ── 5. Composer ───────────────────────────────────────────────────────────────
-passo "Instalando dependências PHP"
+passo "Instalando dependências PHP (Composer)"
 cd "$INSTALL_DIR"
 executar composer install --no-dev --optimize-autoloader --no-interaction
-ok "Composer ok"
+ok "Composer concluído"
 
 # ── 6. NPM + build ────────────────────────────────────────────────────────────
-passo "Compilando Assets (CSS/JS)"
+passo "Compilando Assets (CSS/JavaScript)"
 executar npm install --production=false
 executar npm run build
 ok "Assets compilados"
 
 # ── 7. Permissões ─────────────────────────────────────────────────────────────
-passo "Configurando Permissões"
+passo "Configurando Permissões de Arquivos"
 executar chown -R www-data:www-data "$INSTALL_DIR"
 executar find "$INSTALL_DIR" -type d -exec chmod 755 {} \;
 executar find "$INSTALL_DIR" -type f -exec chmod 644 {} \;
@@ -232,31 +290,31 @@ executar chmod +x "${INSTALL_DIR}/artisan"
 ok "Permissões configuradas"
 
 # ── 8. Migrations ─────────────────────────────────────────────────────────────
-passo "Criando Tabelas no Banco"
+passo "Criando Tabelas no Banco de Dados"
 cd "$INSTALL_DIR"
-sudo -u www-data php artisan migrate --force >> "$LOG_FILE" 2>&1 || erro "Falha nas migrations"
+sudo -u www-data php artisan migrate --force >> "$LOG_FILE" 2>&1 || erro "Falha nas migrations — verifique: $LOG_FILE"
 sudo -u www-data php artisan db:seed --force  >> "$LOG_FILE" 2>&1 || aviso "Seeders com aviso (não crítico)"
-ok "Tabelas criadas"
+ok "Tabelas criadas com sucesso"
 
-# ── 9. Admin ──────────────────────────────────────────────────────────────────
-passo "Criando Administrador"
+# ── 9. Criar Administrador ────────────────────────────────────────────────────
+passo "Criando Usuário Administrador"
 sudo -u www-data php artisan tinker --execute="
     use App\Models\User;
     use Illuminate\Support\Facades\Hash;
     \$u = User::updateOrCreate(['email' => '${ADMIN_EMAIL}'], [
-        'name'  => '${ADMIN_NAME}',
-        'password' => Hash::make('${ADMIN_PASSWORD}'),
-        'role'  => 'admin',
-        'payment_status' => 'paid',
+        'name'               => '${ADMIN_NAME}',
+        'password'           => Hash::make('${ADMIN_PASSWORD}'),
+        'role'               => 'admin',
+        'payment_status'     => 'paid',
         'inspection_credits' => 9999,
-        'email_verified_at' => now(),
+        'email_verified_at'  => now(),
     ]);
-    echo 'OK: ' . \$u->email;
-" >> "$LOG_FILE" 2>&1 || erro "Falha ao criar admin"
-ok "Administrador criado: $ADMIN_EMAIL"
+    echo 'Criado: ' . \$u->email;
+" >> "$LOG_FILE" 2>&1 || erro "Falha ao criar administrador — verifique: $LOG_FILE"
+ok "Administrador criado: ${ADMIN_EMAIL}"
 
 # ── 10. Otimizar Laravel ──────────────────────────────────────────────────────
-passo "Otimizando Laravel"
+passo "Otimizando a Aplicação"
 cd "$INSTALL_DIR"
 sudo -u www-data php artisan config:clear  >> "$LOG_FILE" 2>&1
 sudo -u www-data php artisan route:clear   >> "$LOG_FILE" 2>&1
@@ -289,27 +347,36 @@ executar systemctl restart vistoria-queue
 ok "Queue worker ativo"
 
 # ── 12. Scheduler ─────────────────────────────────────────────────────────────
-passo "Configurando Scheduler"
+passo "Configurando Agendador de Tarefas"
 (crontab -l 2>/dev/null | grep -v "vistoria.*schedule:run"; \
  echo "* * * * * www-data cd ${INSTALL_DIR} && php artisan schedule:run >> /dev/null 2>&1") | crontab -
 ok "Scheduler configurado"
 
-# ── Relatório ─────────────────────────────────────────────────────────────────
+# ── Relatório Final ───────────────────────────────────────────────────────────
 echo ""
 echo -e "${VERDE}"
 echo "  ╔══════════════════════════════════════════════════════════════╗"
 echo "  ║        ✅  INSTALAÇÃO CONCLUÍDA COM SUCESSO!                ║"
 echo "  ╚══════════════════════════════════════════════════════════════╝"
 echo -e "${RESET}"
-echo -e "  🌐 ${NEGRITO}Acesse:${RESET}  ${VERDE}${APP_URL}${RESET}"
+echo -e "  🌐 ${NEGRITO}Acesse o sistema:${RESET}  ${VERDE}${APP_URL}${RESET}"
 echo ""
-echo -e "  ${NEGRITO}── ADMINISTRADOR ─────────────────────────────────────${RESET}"
-echo -e "  📧 E-mail:   ${AMARELO}${ADMIN_EMAIL}${RESET}"
-echo -e "  🔒 Senha:    ${AMARELO}${ADMIN_PASSWORD}${RESET}"
+echo -e "  ${NEGRITO}── ACESSO ADMINISTRADOR ──────────────────────────────${RESET}"
+echo -e "  📧 E-mail:  ${AMARELO}${ADMIN_EMAIL}${RESET}"
+echo -e "  🔒 Senha:   ${AMARELO}${ADMIN_PASSWORD}${RESET}"
 echo ""
 echo -e "  ${NEGRITO}── BANCO DE DADOS ────────────────────────────────────${RESET}"
-echo -e "  🗄️  Banco:    ${DB_NAME}   Usuário: ${DB_USER}"
+echo -e "  🗄️  Banco:   ${DB_NAME}   Usuário: ${DB_USER}"
 echo ""
-echo -e "  📄 Log: ${AMARELO}${LOG_FILE}${RESET}"
-echo -e "${AMARELO}  ⚠️  Guarde as credenciais acima em local seguro!${RESET}"
+echo -e "  ${NEGRITO}── COMANDOS ÚTEIS ────────────────────────────────────${RESET}"
+echo -e "  ${CIANO}tail -f ${INSTALL_DIR}/storage/logs/laravel.log${RESET}"
+echo -e "  ${CIANO}systemctl restart nginx php${PHP_VERSION}-fpm mysql${RESET}"
+echo -e "  ${CIANO}systemctl status vistoria-queue${RESET}"
 echo ""
+echo -e "  📄 Log completo: ${AMARELO}${LOG_FILE}${RESET}"
+echo ""
+echo -e "${AMARELO}  ⚠️  IMPORTANTE: Guarde as credenciais acima em local seguro!${RESET}"
+echo ""
+
+
+VERMELHO='\033[0;31m'
