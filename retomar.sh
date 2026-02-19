@@ -223,10 +223,20 @@ if ! curl -fsSL --max-time 10 "https://github.com" > /dev/null 2>&1; then
 fi
 ok "GitHub acessível"
 
-# Sempre remover e clonar de novo — garante instalação limpa e evita
+# Remover diretório anterior completamente — evita "dubious ownership" e
 # problemas com repositório parcialmente clonado ou remote inválido.
 info "Removendo instalação anterior (se houver)..."
-rm -rf "$INSTALL_DIR"
+if [[ -d "$INSTALL_DIR" ]]; then
+    # Forçar dono para root antes de remover (evita permissão negada)
+    chown -R root:root "$INSTALL_DIR" 2>/dev/null || true
+    rm -rf "$INSTALL_DIR"
+fi
+
+# Garantir que o diretório pai existe
+mkdir -p "$(dirname "$INSTALL_DIR")"
+
+# Adicionar safe.directory globalmente para evitar erro de ownership
+git config --global --add safe.directory "$INSTALL_DIR" 2>/dev/null || true
 
 info "Clonando de github.com/${GITHUB_REPO}..."
 git clone --depth=1 --branch "$GITHUB_BRANCH" \

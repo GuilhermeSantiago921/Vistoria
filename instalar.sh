@@ -501,10 +501,15 @@ clonar_repositorio() {
         executar apt-get install -y git
     fi
 
-    if [[ -d "${INSTALL_DIR}/.git" ]]; then
-        info "Repositório já existe. Removendo para instalação limpa..."
+    if [[ -d "${INSTALL_DIR}" ]]; then
+        info "Diretório existente detectado. Removendo para instalação limpa..."
+        chown -R root:root "$INSTALL_DIR" 2>/dev/null || true
         rm -rf "$INSTALL_DIR"
     fi
+
+    # Garantir diretório pai e safe.directory (evita "dubious ownership")
+    mkdir -p "$(dirname "$INSTALL_DIR")"
+    git config --global --add safe.directory "$INSTALL_DIR" 2>/dev/null || true
 
     info "Clonando repositório: github.com/${GITHUB_REPO}..."
     git clone \
