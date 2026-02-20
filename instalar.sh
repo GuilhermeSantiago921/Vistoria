@@ -9,7 +9,7 @@
 #  Ou:  curl -fsSL https://raw.githubusercontent.com/GuilhermeSantiago921/Vistoria/main/instalar.sh | sudo bash
 # =============================================================================
 
-set -euo pipefail
+set -uo pipefail
 
 # ── Cores ────────────────────────────────────────────────────────────────────
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
@@ -24,6 +24,7 @@ info()    { echo -e "  ${BLUE}ℹ${NC}  $1"; }
 success() { echo -e "  ${GREEN}✔${NC}  $1"; }
 warn()    { echo -e "  ${YELLOW}⚠${NC}  $1"; }
 error()   { echo -e "\n  ${RED}✘  ERRO: $1${NC}"; echo -e "\n  Verifique o log completo em: ${LOG_FILE}"; exit 1; }
+die()     { echo -e "\n  ${RED}✘  FATAL: $1${NC}"; echo -e "\n  Verifique o log completo em: ${LOG_FILE}"; exit 1; }
 step()    { echo -e "\n${BOLD}━━━ $1 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"; }
 
 # ── Constantes ────────────────────────────────────────────────────────────────
@@ -111,26 +112,14 @@ while true; do
 done
 [[ -z "$DB_PASSWORD" ]] && error "A senha do banco não pode ser vazia."
 
-# Administrador
-echo
-echo -e "  3. Conta de Administrador do Sistema:"
-echo
-read -rp "     Nome completo do administrador [Administrador]: " ADMIN_NAME
-ADMIN_NAME=${ADMIN_NAME:-Administrador}
-read -rp "     E-mail do administrador [admin@vistoria.com.br]: " ADMIN_EMAIL
-ADMIN_EMAIL=${ADMIN_EMAIL:-admin@vistoria.com.br}
-
-while true; do
-    read -rsp "     Senha do administrador (mínimo 8 caracteres): " ADMIN_PASSWORD; echo
-    read -rsp "     Confirme a senha do administrador: " ADMIN_PASSWORD_CONFIRM; echo
-    [[ "$ADMIN_PASSWORD" == "$ADMIN_PASSWORD_CONFIRM" && ${#ADMIN_PASSWORD} -ge 8 ]] && break
-    [[ "$ADMIN_PASSWORD" != "$ADMIN_PASSWORD_CONFIRM" ]] && warn "Senhas não conferem." || warn "Senha muito curta (mínimo 8 caracteres)."
-done
-
 # SSL
 echo
 read -rp "  Instalar SSL com Let's Encrypt/Certbot? [S/n]: " INSTALL_SSL
 INSTALL_SSL=${INSTALL_SSL:-S}
+
+# E-mail para SSL (Certbot requer e-mail)
+read -rp "  E-mail para notificações SSL [admin@${DOMAIN:-localhost}]: " SSL_EMAIL
+SSL_EMAIL=${SSL_EMAIL:-"admin@${DOMAIN:-localhost}"}
 
 # Resumo
 echo
@@ -140,8 +129,6 @@ echo -e "  ├──────────────────────
 echo -e "  │  URL do sistema:    ${CYAN}${APP_URL}${NC}"
 echo -e "  │  Banco de dados:    ${CYAN}${DB_DATABASE}${NC}"
 echo -e "  │  Usuário do banco:  ${CYAN}${DB_USERNAME}${NC}"
-echo -e "  │  Admin - Nome:      ${CYAN}${ADMIN_NAME}${NC}"
-echo -e "  │  Admin - E-mail:    ${CYAN}${ADMIN_EMAIL}${NC}"
 echo -e "  │  Diretório:         ${CYAN}${APP_DIR}${NC}"
 echo -e "  └─────────────────────────────────────────────────────────┘"
 echo
@@ -421,7 +408,7 @@ cp .env.example .env
 php artisan key:generate --force --quiet
 APP_KEY=$(grep "^APP_KEY=" .env | cut -d'=' -f2-)
 
-cat > .env << EOF
+cat > .env << ENVEOF
 APP_NAME="Sistema de Vistoria"
 APP_ENV=production
 APP_KEY=${APP_KEY}
@@ -459,10 +446,10 @@ MAIL_PORT=2525
 MAIL_USERNAME=null
 MAIL_PASSWORD=null
 MAIL_FROM_ADDRESS="noreply@${DOMAIN}"
-MAIL_FROM_NAME="\${APP_NAME}"
+MAIL_FROM_NAME="Sistema de Vistoria"
 
-VITE_APP_NAME="\${APP_NAME}"
-EOF
+VITE_APP_NAME="Sistema de Vistoria"
+ENVEOF
 
 success "Arquivo .env criado"
 
@@ -474,16 +461,28 @@ step "Instalando Dependências PHP (Composer)"
 export HOME=/root
 
 info "Instalando pacotes do Composer (modo produção)..."
-composer install --no-dev --optimize-autoloader --no-interaction --quiet 2>/dev/null
+COMPOSER_ALLOW_SUPERUSER=1 composer install \
+    --no-dev \
+    --optimize-autoloader \
+    --no-interaction \
+    --no-progress \
+    --quiet 2>/dev/null \
+    || COMPOSER_ALLOW_SUPERUSER=1 composer install \
+        --no-dev \
+        --optimize-autoloader \
+        --no-interaction \
+        --no-progress
 success "Dependências PHP instaladas"
 
 # ═══════════════════════════════════════════════════════════════════════════════
 step "Compilando Assets (CSS/JavaScript)"
 # ═══════════════════════════════════════════════════════════════════════════════
 info "Instalando pacotes NPM..."
-npm ci --silent 2>/dev/null
+npm install --no-audit --no-fund --loglevel=error 2>/dev/null \
+    || npm install --no-audit --no-fund
 info "Compilando assets para produção..."
-npm run build 2>/dev/null
+npm run build 2>/dev/null \
+    || npm run build
 success "Assets compilados com sucesso"
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -501,119 +500,23 @@ success "Permissões configuradas"
 step "Criando Tabelas no Banco de Dados"
 # ═══════════════════════════════════════════════════════════════════════════════
 info "Executando migrações..."
-php artisan migrate --force 2>/dev/null || error "Falha ao executar as migrações. Verifique as credenciais do banco."
+export COMPOSER_ALLOW_SUPERUSER=1
+if ! php artisan migrate --force 2>&1; then
+    die "Falha ao executar as migrações. Verifique as credenciais do banco."
+fi
 success "Tabelas criadas com sucesso"
 
 # Link de storage
 php artisan storage:link --quiet 2>/dev/null || true
 
-# Seeders (dados iniciais)
-if php artisan db:seed --force --quiet 2>/dev/null; then
-    info "Criando dados iniciais..."
-    success "Dados iniciais inseridos"
-fi
+# Seeders (dados iniciais) — ignora falha
+info "Executando seeders de dados iniciais..."
+php artisan db:seed --force --quiet 2>/dev/null && success "Dados iniciais inseridos" || warn "Seeders pulados (opcional)"
 
 # Cache de produção
-php artisan config:cache  --quiet 2>/dev/null
-php artisan route:cache   --quiet 2>/dev/null
-php artisan view:cache    --quiet 2>/dev/null
-
-# ═══════════════════════════════════════════════════════════════════════════════
-step "Criando Usuário Administrador"
-# ═══════════════════════════════════════════════════════════════════════════════
-info "Criando conta de administrador '${ADMIN_EMAIL}'..."
-
-cd "$APP_DIR"
-
-# Desabilitar timeouts e erros de PsySH
-export HOME=/tmp
-export TMPDIR=/tmp
-export PSYSH_CONFIG_DIR=/tmp/.psysh
-
-mkdir -p /tmp/.psysh
-
-# Usar o seeder existente mas com variáveis de ambiente
-cat > database/seeders/AdminUserSeeder.php << 'SEEDEREOF'
-<?php
-
-namespace Database\Seeders;
-
-use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
-use App\Models\User;
-
-class AdminUserSeeder extends Seeder
-{
-    public function run()
-    {
-        $email = $_SERVER['ADMIN_EMAIL'] ?? 'admin@vistoria.com.br';
-        $name = $_SERVER['ADMIN_NAME'] ?? 'Administrador';
-        $password = $_SERVER['ADMIN_PASSWORD'] ?? 'password';
-
-        if (User::where('email', $email)->exists()) {
-            echo "✓ Usuário já existe\n";
-            return;
-        }
-
-        User::create([
-            'name' => $name,
-            'email' => $email,
-            'password' => Hash::make($password),
-            'email_verified_at' => now(),
-        ]);
-
-        echo "✓ Administrador criado\n";
-    }
-}
-SEEDEREOF
-
-# Executar o seeder
-ADMIN_EMAIL="$ADMIN_EMAIL" ADMIN_NAME="$ADMIN_NAME" ADMIN_PASSWORD="$ADMIN_PASSWORD" \
-    php artisan db:seed --class=Database\\\\Seeders\\\\AdminUserSeeder 2>&1 | tee -a "$LOG_FILE"
-
-if [ ${PIPESTATUS[0]} -eq 0 ]; then
-    success "Usuário administrador criado"
-else
-    warn "Seeder falhou. Tentando método alternativo..."
-    
-    # Último recurso: criar via comando PHP direto
-    php -d display_errors=0 -d error_reporting=0 << 'PHPSCRIPT' 2>/dev/null
-<?php
-$appPath = getcwd();
-require "$appPath/vendor/autoload.php";
-$app = require "$appPath/bootstrap/app.php";
-$kernel = $app->make(\Illuminate\Contracts\Console\Kernel::class);
-$kernel->bootstrap();
-
-$email = getenv('ADMIN_EMAIL') ?: 'admin@vistoria.com.br';
-$name = getenv('ADMIN_NAME') ?: 'Administrador';
-$password = getenv('ADMIN_PASSWORD') ?: 'password';
-
-if (\App\Models\User::where('email', $email)->exists()) {
-    exit(0);
-}
-
-\App\Models\User::create([
-    'name' => $name,
-    'email' => $email,
-    'password' => \Illuminate\Support\Facades\Hash::make($password),
-    'email_verified_at' => \Carbon\Carbon::now(),
-]);
-exit(0);
-PHPSCRIPT
-    
-    if [ $? -eq 0 ]; then
-        success "Usuário administrador criado (método alternativo)"
-    else
-        warn "Criação automática de admin falhou."
-        warn "Crie manualmente após a instalação com:"
-        warn "  cd ${APP_DIR}"
-        warn "  php artisan db:seed --class=Database\\\\Seeders\\\\AdminUserSeeder"
-    fi
-fi
-
-# Reajustar permissões
-chown -R www-data:www-data "$APP_DIR/storage" "$APP_DIR/bootstrap/cache"
+php artisan config:cache  --quiet 2>/dev/null || true
+php artisan route:cache   --quiet 2>/dev/null || true
+php artisan view:cache    --quiet 2>/dev/null || true
 
 # ═══════════════════════════════════════════════════════════════════════════════
 step "Configurando Supervisor (Filas em Background)"
@@ -667,7 +570,7 @@ if echo "$INSTALL_SSL" | grep -qi '^s'; then
             -d "www.${DOMAIN}" \
             --non-interactive \
             --agree-tos \
-            --email "${ADMIN_EMAIL}" \
+            --email "${SSL_EMAIL}" \
             --redirect 2>/dev/null; then
             sed -i "s|APP_URL=http://|APP_URL=https://|g" "${APP_DIR}/.env"
             APP_URL="${APP_URL/http:\/\//https://}"
@@ -685,10 +588,12 @@ else
 fi
 
 # ── Cron: schedule:run + renovação automática de SSL ──────────────────────────
-(crontab -l 2>/dev/null | grep -v 'artisan schedule\|certbot renew' || true
- echo "* * * * * www-data php ${APP_DIR}/artisan schedule:run >> /dev/null 2>&1"
- echo "0 3 * * * root certbot renew --quiet --post-hook 'systemctl reload nginx'"
-) | crontab -
+CRON_SCHEDULE="* * * * * www-data php ${APP_DIR}/artisan schedule:run >> /dev/null 2>&1"
+CRON_SSL="0 3 * * * root certbot renew --quiet --post-hook 'systemctl reload nginx'"
+CRON_FILE="/etc/cron.d/vistoria"
+echo "$CRON_SCHEDULE" > "$CRON_FILE"
+echo "$CRON_SSL" >> "$CRON_FILE"
+chmod 644 "$CRON_FILE"
 success "Cron configurado (schedule:run + renovação SSL diária às 03:00)"
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -710,8 +615,11 @@ echo -e "  ${BOLD}  ACESSO AO SISTEMA${NC}"
 echo -e "  ${BOLD}${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo
 echo -e "  🌐 URL         : ${GREEN}${APP_URL}${NC}"
-echo -e "  👤 Admin e-mail: ${GREEN}${ADMIN_EMAIL}${NC}"
-echo -e "  🔑 Senha admin : ${GREEN}${ADMIN_PASSWORD}${NC}"
+echo
+echo -e "  ${YELLOW}⚠  Usuário administrador NÃO foi criado ainda.${NC}"
+echo -e "  Para criar, execute após a instalação:"
+echo -e "  ${CYAN}cd ${APP_DIR} && php artisan tinker${NC}"
+echo -e "  ${CYAN}>> \\App\\Models\\User::create(['name'=>'Admin','email'=>'seu@email.com','password'=>bcrypt('suasenha'),'email_verified_at'=>now()])${NC}"
 echo
 echo -e "  ${BOLD}${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo -e "  ${BOLD}  BANCO DE DADOS${NC}"
