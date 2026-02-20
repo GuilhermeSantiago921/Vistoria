@@ -17,7 +17,8 @@ BLUE='\033[0;34m'; CYAN='\033[0;36m'; BOLD='\033[1m'; NC='\033[0m'
 
 # ── Log em arquivo ────────────────────────────────────────────────────────────
 LOG_FILE="/tmp/vistoria-install-$(date +%Y%m%d_%H%M%S).log"
-exec > >(tee -a "$LOG_FILE") 2>&1
+# Redirecionar stdout/stderr para log SEM interferir no stdin (tty)
+exec > >(tee -a "$LOG_FILE") 2>&1 || true
 
 # ── Funções de log ────────────────────────────────────────────────────────────
 info()    { echo -e "  ${BLUE}ℹ${NC}  $1"; }
@@ -81,7 +82,7 @@ echo
 SERVER_IP=$(hostname -I | awk '{print $1}' 2>/dev/null || echo "localhost")
 echo -e "  1. URL de acesso ao sistema:"
 echo -e "     Exemplos: http://meusite.com.br  |  http://${SERVER_IP}"
-read -rp "     URL [http://${SERVER_IP}]: " APP_URL
+read -rp "     URL [http://${SERVER_IP}]: " APP_URL </dev/tty
 APP_URL=${APP_URL:-"http://${SERVER_IP}"}
 # Extrair domínio da URL para uso no Nginx/Certbot
 DOMAIN=$(echo "$APP_URL" | sed 's|https\?://||' | sed 's|/.*||')
@@ -92,44 +93,49 @@ echo
 echo -e "  2. Configuração do Banco de Dados MySQL:"
 echo
 while true; do
-    read -rsp "     Senha para o usuário ROOT do MySQL: " MYSQL_ROOT_PASSWORD; echo
-    read -rsp "     Confirme a senha root: " MYSQL_ROOT_CONFIRM; echo
-    [[ "$MYSQL_ROOT_PASSWORD" == "$MYSQL_ROOT_CONFIRM" ]] && break
+    read -sp "     Senha para o usuário ROOT do MySQL: " MYSQL_ROOT_PASSWORD </dev/tty; echo
+    read -sp "     Confirme a senha root: " MYSQL_ROOT_CONFIRM </dev/tty; echo
+    [ "$MYSQL_ROOT_PASSWORD" = "$MYSQL_ROOT_CONFIRM" ] && break
     warn "Senhas não conferem. Tente novamente."
 done
 
-read -rp "     Nome do banco de dados [vistoria]: " DB_DATABASE
+read -rp "     Nome do banco de dados [vistoria]: " DB_DATABASE </dev/tty
 DB_DATABASE=${DB_DATABASE:-vistoria}
-read -rp "     Nome do usuário do banco [vistoria_user]: " DB_USERNAME
+read -rp "     Nome do usuário do banco [vistoria_user]: " DB_USERNAME </dev/tty
 DB_USERNAME=${DB_USERNAME:-vistoria_user}
 
 while true; do
-    read -rsp "     Senha do usuário do banco: " DB_PASSWORD; echo
-    read -rsp "     Confirme a senha do banco: " DB_PASSWORD_CONFIRM; echo
-    [[ "$DB_PASSWORD" == "$DB_PASSWORD_CONFIRM" ]] && break
+    read -sp "     Senha do usuário do banco: " DB_PASSWORD </dev/tty; echo
+    read -sp "     Confirme a senha do banco: " DB_PASSWORD_CONFIRM </dev/tty; echo
+    [ "$DB_PASSWORD" = "$DB_PASSWORD_CONFIRM" ] && break
     warn "Senhas não conferem. Tente novamente."
 done
-[[ -z "$DB_PASSWORD" ]] && error "A senha do banco não pode ser vazia."
+[ -z "$DB_PASSWORD" ] && error "A senha do banco não pode ser vazia."
 
 # Administrador
 echo
 echo -e "  3. Conta de Administrador do Sistema:"
 echo
-read -rp "     Nome completo do administrador [Administrador]: " ADMIN_NAME
+read -rp "     Nome completo do administrador [Administrador]: " ADMIN_NAME </dev/tty
 ADMIN_NAME=${ADMIN_NAME:-Administrador}
-read -rp "     E-mail do administrador [admin@vistoria.com.br]: " ADMIN_EMAIL
+read -rp "     E-mail do administrador [admin@vistoria.com.br]: " ADMIN_EMAIL </dev/tty
 ADMIN_EMAIL=${ADMIN_EMAIL:-admin@vistoria.com.br}
 
 while true; do
-    read -rsp "     Senha do administrador (mínimo 8 caracteres): " ADMIN_PASSWORD; echo
-    read -rsp "     Confirme a senha do administrador: " ADMIN_PASSWORD_CONFIRM; echo
-    [[ "$ADMIN_PASSWORD" == "$ADMIN_PASSWORD_CONFIRM" && ${#ADMIN_PASSWORD} -ge 8 ]] && break
-    [[ "$ADMIN_PASSWORD" != "$ADMIN_PASSWORD_CONFIRM" ]] && warn "Senhas não conferem." || warn "Senha muito curta (mínimo 8 caracteres)."
+    read -sp "     Senha do administrador (mínimo 8 caracteres): " ADMIN_PASSWORD </dev/tty; echo
+    read -sp "     Confirme a senha do administrador: " ADMIN_PASSWORD_CONFIRM </dev/tty; echo
+    if [ "$ADMIN_PASSWORD" = "$ADMIN_PASSWORD_CONFIRM" ] && [ ${#ADMIN_PASSWORD} -ge 8 ]; then
+        break
+    elif [ "$ADMIN_PASSWORD" != "$ADMIN_PASSWORD_CONFIRM" ]; then
+        warn "Senhas não conferem."
+    else
+        warn "Senha muito curta (mínimo 8 caracteres)."
+    fi
 done
 
 # SSL
 echo
-read -rp "  Instalar SSL com Let's Encrypt/Certbot? [S/n]: " INSTALL_SSL
+read -rp "  Instalar SSL com Let's Encrypt/Certbot? [S/n]: " INSTALL_SSL </dev/tty
 INSTALL_SSL=${INSTALL_SSL:-S}
 
 # Resumo
@@ -145,7 +151,7 @@ echo -e "  │  Admin - E-mail:    ${CYAN}${ADMIN_EMAIL}${NC}"
 echo -e "  │  Diretório:         ${CYAN}${APP_DIR}${NC}"
 echo -e "  └─────────────────────────────────────────────────────────┘"
 echo
-read -rp "  Confirmar e iniciar instalação? [S/n]: " CONFIRM
+read -rp "  Confirmar e iniciar instalação? [S/n]: " CONFIRM </dev/tty
 [[ "${CONFIRM,,}" == "n" ]] && { echo "Instalação cancelada."; exit 0; }
 
 echo
