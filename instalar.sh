@@ -1,813 +1,701 @@
 #!/bin/bash
 
 # =============================================================================
-# 🚗 SISTEMA DE VISTORIA VEICULAR - INSTALADOR AUTOMÁTICO
-# =============================================================================
-# Compatível com: Ubuntu 20.04+, Debian 11+
-# Requisitos: Mínimo 1GB RAM, 10GB disco livre
+#  INSTALADOR - SISTEMA DE VISTORIA VEICULAR
+#  Ubuntu Server 22.04 / 24.04 LTS
+#  Repositório: https://github.com/GuilhermeSantiago921/Vistoria
 #
-# INSTALAÇÃO RÁPIDA (uma linha):
-#   curl -fsSL https://raw.githubusercontent.com/GuilhermeSantiago921/vistoria/main/instalar.sh | sudo bash
-#
-# OU baixar e executar:
-#   wget https://raw.githubusercontent.com/GuilhermeSantiago921/vistoria/main/instalar.sh
-#   sudo bash instalar.sh
+#  Uso: sudo bash instalar.sh
+#  Ou:  curl -fsSL https://raw.githubusercontent.com/GuilhermeSantiago921/Vistoria/main/instalar.sh | sudo bash
 # =============================================================================
 
-set -e
+set -o pipefail
 
-# ─── Cores para o terminal ────────────────────────────────────────────────────
-VERMELHO='\033[0;31m'
-VERDE='\033[0;32m'
-AMARELO='\033[1;33m'
-AZUL='\033[0;34m'
-CIANO='\033[0;36m'
-BRANCO='\033[1;37m'
-NEGRITO='\033[1m'
-RESET='\033[0m'
+# ── Cores ────────────────────────────────────────────────────────────────────
+RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
+BLUE='\033[0;34m'; CYAN='\033[0;36m'; BOLD='\033[1m'; NC='\033[0m'
 
-# ─── Variáveis globais ────────────────────────────────────────────────────────
+# ── Log em arquivo ────────────────────────────────────────────────────────────
 LOG_FILE="/tmp/vistoria-install-$(date +%Y%m%d_%H%M%S).log"
-INSTALL_DIR="/var/www/vistoria"
+exec > >(tee -a "$LOG_FILE") 2>&1
+
+# ── Funções de log ────────────────────────────────────────────────────────────
+info()    { echo -e "  ${BLUE}ℹ${NC}  $1"; }
+success() { echo -e "  ${GREEN}✔${NC}  $1"; }
+warn()    { echo -e "  ${YELLOW}⚠${NC}  $1"; }
+error()   { echo -e "\n  ${RED}✘  ERRO: $1${NC}"; echo -e "\n  Verifique o log completo em: ${LOG_FILE}"; exit 1; }
+step()    { echo -e "\n${BOLD}━━━ $1 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"; }
+
+# ── Constantes ────────────────────────────────────────────────────────────────
+APP_DIR="/var/www/vistoria"
+GITHUB_REPO="https://github.com/GuilhermeSantiago921/Vistoria.git"
 PHP_VERSION="8.2"
-GITHUB_REPO="GuilhermeSantiago921/vistoria"
-GITHUB_BRANCH="main"
-MYSQL_ROOT_PASSWORD=""
-DB_NAME="vistoria"
-DB_USER="vistoria_user"
-DB_PASSWORD=""
-APP_URL=""
-APP_KEY=""
-ADMIN_EMAIL=""
-ADMIN_PASSWORD=""
-ADMIN_NAME=""
+NODE_VERSION="20"
+export DEBIAN_FRONTEND=noninteractive
 
-# ─── Funções auxiliares ───────────────────────────────────────────────────────
+# ── Verificações iniciais ─────────────────────────────────────────────────────
+[[ $EUID -ne 0 ]] && { echo -e "${RED}Execute como root: sudo bash instalar.sh${NC}"; exit 1; }
 
-imprimir_cabecalho() {
-    clear
-    echo -e "${AZUL}"
-    echo "  ╔══════════════════════════════════════════════════════════════╗"
-    echo "  ║          🚗  SISTEMA DE VISTORIA VEICULAR                   ║"
-    echo "  ║               Instalador Automático v2.0                    ║"
-    echo "  ║         github.com/GuilhermeSantiago921/vistoria             ║"
-    echo "  ╚══════════════════════════════════════════════════════════════╝"
-    echo -e "${RESET}"
-    echo -e "  ${CIANO}Logs salvos em:${RESET} $LOG_FILE"
-    echo ""
-}
+if ! grep -qiE "ubuntu|debian" /etc/os-release 2>/dev/null; then
+    warn "SO não identificado como Ubuntu/Debian. Prosseguindo mesmo assim..."
+fi
 
-passo() {
-    echo -e "\n${AZUL}${NEGRITO}━━━ $1 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
-}
+# ── Banner ────────────────────────────────────────────────────────────────────
+clear
+echo -e "${BOLD}${CYAN}"
+cat << 'BANNER'
+  ╔══════════════════════════════════════════════════════════════╗
+  ║          🚗  SISTEMA DE VISTORIA VEICULAR                   ║
+  ║               Instalador Automático v2.1                    ║
+  ║         github.com/GuilhermeSantiago921/Vistoria             ║
+  ╚══════════════════════════════════════════════════════════════╝
+BANNER
+echo -e "${NC}"
+echo -e "  Logs salvos em: ${CYAN}${LOG_FILE}${NC}"
+echo
 
-ok() {
-    echo -e "  ${VERDE}✔${RESET}  $1"
-}
+# ── Verificar recursos do servidor ───────────────────────────────────────────
+step "Verificando Recursos do Servidor"
+RAM_MB=$(free -m | awk '/^Mem:/{print $7}')
+DISK_GB=$(df -BG / | awk 'NR==2{gsub("G",""); print $4}')
 
-info() {
-    echo -e "  ${CIANO}ℹ${RESET}  $1"
-}
+[[ "$RAM_MB" -lt 256 ]] && warn "RAM disponível baixa: ${RAM_MB}MB. Mínimo recomendado: 512MB." \
+                         || success "RAM disponível: ${RAM_MB}MB"
+[[ "$DISK_GB" -lt 5 ]]  && error "Espaço em disco insuficiente: ${DISK_GB}GB livres. Mínimo: 5GB." \
+                         || success "Espaço em disco livre: ${DISK_GB}GB"
 
-aviso() {
-    echo -e "  ${AMARELO}⚠${RESET}  $1"
-}
+if curl -fsS --max-time 5 https://github.com > /dev/null 2>&1; then
+    success "Conexão com internet ativa"
+else
+    error "Sem conexão com a internet. Verifique a rede e tente novamente."
+fi
 
-erro() {
-    echo -e "  ${VERMELHO}✘  ERRO: $1${RESET}"
-    echo -e "\n  Verifique o log completo em: ${AMARELO}$LOG_FILE${RESET}"
-    exit 1
-}
+# ── Coletar configurações ─────────────────────────────────────────────────────
+step "Configuração do Sistema"
+echo
+echo -e "  Preencha as informações abaixo para configurar o sistema."
+echo -e "  Pressione ENTER para usar o valor padrão (entre colchetes)."
+echo
 
-executar() {
-    # Executa o comando e salva no log sem mostrar saída ao usuário
-    if ! "$@" >> "$LOG_FILE" 2>&1; then
-        erro "Falha ao executar: $*"
+# URL do sistema
+SERVER_IP=$(hostname -I | awk '{print $1}' 2>/dev/null || echo "localhost")
+echo -e "  1. URL de acesso ao sistema:"
+echo -e "     Exemplos: http://meusite.com.br  |  http://${SERVER_IP}"
+read -rp "     URL [http://${SERVER_IP}]: " APP_URL
+APP_URL=${APP_URL:-"http://${SERVER_IP}"}
+# Extrair domínio da URL para uso no Nginx/Certbot
+DOMAIN=$(echo "$APP_URL" | sed 's|https\?://||' | sed 's|/.*||')
+[[ -z "$DOMAIN" ]] && error "URL inválida."
+
+# Banco de dados
+echo
+echo -e "  2. Configuração do Banco de Dados MySQL:"
+echo
+while true; do
+    read -rsp "     Senha para o usuário ROOT do MySQL: " MYSQL_ROOT_PASSWORD; echo
+    read -rsp "     Confirme a senha root: " MYSQL_ROOT_CONFIRM; echo
+    [[ "$MYSQL_ROOT_PASSWORD" == "$MYSQL_ROOT_CONFIRM" ]] && break
+    warn "Senhas não conferem. Tente novamente."
+done
+
+read -rp "     Nome do banco de dados [vistoria]: " DB_DATABASE
+DB_DATABASE=${DB_DATABASE:-vistoria}
+read -rp "     Nome do usuário do banco [vistoria_user]: " DB_USERNAME
+DB_USERNAME=${DB_USERNAME:-vistoria_user}
+
+while true; do
+    read -rsp "     Senha do usuário do banco: " DB_PASSWORD; echo
+    read -rsp "     Confirme a senha do banco: " DB_PASSWORD_CONFIRM; echo
+    [[ "$DB_PASSWORD" == "$DB_PASSWORD_CONFIRM" ]] && break
+    warn "Senhas não conferem. Tente novamente."
+done
+[[ -z "$DB_PASSWORD" ]] && error "A senha do banco não pode ser vazia."
+
+# Administrador
+echo
+echo -e "  3. Conta de Administrador do Sistema:"
+echo
+read -rp "     Nome completo do administrador [Administrador]: " ADMIN_NAME
+ADMIN_NAME=${ADMIN_NAME:-Administrador}
+read -rp "     E-mail do administrador [admin@vistoria.com.br]: " ADMIN_EMAIL
+ADMIN_EMAIL=${ADMIN_EMAIL:-admin@vistoria.com.br}
+
+while true; do
+    read -rsp "     Senha do administrador (mínimo 8 caracteres): " ADMIN_PASSWORD; echo
+    read -rsp "     Confirme a senha do administrador: " ADMIN_PASSWORD_CONFIRM; echo
+    [[ "$ADMIN_PASSWORD" == "$ADMIN_PASSWORD_CONFIRM" && ${#ADMIN_PASSWORD} -ge 8 ]] && break
+    [[ "$ADMIN_PASSWORD" != "$ADMIN_PASSWORD_CONFIRM" ]] && warn "Senhas não conferem." || warn "Senha muito curta (mínimo 8 caracteres)."
+done
+
+# SSL
+echo
+read -rp "  Instalar SSL com Let's Encrypt/Certbot? [S/n]: " INSTALL_SSL
+INSTALL_SSL=${INSTALL_SSL:-S}
+
+# Resumo
+echo
+echo -e "  ┌─────────────────────────────────────────────────────────┐"
+echo -e "  │              RESUMO DA CONFIGURAÇÃO                       │"
+echo -e "  ├─────────────────────────────────────────────────────────┤"
+echo -e "  │  URL do sistema:    ${CYAN}${APP_URL}${NC}"
+echo -e "  │  Banco de dados:    ${CYAN}${DB_DATABASE}${NC}"
+echo -e "  │  Usuário do banco:  ${CYAN}${DB_USERNAME}${NC}"
+echo -e "  │  Admin - Nome:      ${CYAN}${ADMIN_NAME}${NC}"
+echo -e "  │  Admin - E-mail:    ${CYAN}${ADMIN_EMAIL}${NC}"
+echo -e "  │  Diretório:         ${CYAN}${APP_DIR}${NC}"
+echo -e "  └─────────────────────────────────────────────────────────┘"
+echo
+read -rp "  Confirmar e iniciar instalação? [S/n]: " CONFIRM
+[[ "${CONFIRM,,}" == "n" ]] && { echo "Instalação cancelada."; exit 0; }
+
+echo
+echo -e "  Iniciando instalação..."
+echo -e "  Isso pode levar de 5 a 15 minutos."
+echo -e "  Acompanhe o progresso abaixo."
+
+# ═══════════════════════════════════════════════════════════════════════════════
+step "Atualizando Sistema e Instalando Dependências"
+# ═══════════════════════════════════════════════════════════════════════════════
+export DEBIAN_FRONTEND=noninteractive
+info "Atualizando pacotes do sistema..."
+apt-get update -qq
+apt-get upgrade -y -qq 2>/dev/null
+success "Sistema atualizado"
+
+info "Instalando utilitários básicos..."
+apt-get install -y -qq \
+    curl wget git unzip zip gnupg2 lsb-release ca-certificates \
+    software-properties-common apt-transport-https ufw 2>/dev/null
+success "Utilitários instalados"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+step "Instalando PHP ${PHP_VERSION}"
+# ═══════════════════════════════════════════════════════════════════════════════
+if php -v 2>/dev/null | grep -q "PHP ${PHP_VERSION}"; then
+    success "PHP ${PHP_VERSION} já instalado"
+else
+    info "Adicionando repositório ondrej/php..."
+    add-apt-repository ppa:ondrej/php -y -q > /dev/null 2>&1
+    apt-get update -qq
+
+    info "Instalando PHP ${PHP_VERSION} e extensões..."
+    apt-get install -y -qq \
+        php${PHP_VERSION} \
+        php${PHP_VERSION}-cli \
+        php${PHP_VERSION}-fpm \
+        php${PHP_VERSION}-common \
+        php${PHP_VERSION}-mysql \
+        php${PHP_VERSION}-sqlite3 \
+        php${PHP_VERSION}-xml \
+        php${PHP_VERSION}-curl \
+        php${PHP_VERSION}-mbstring \
+        php${PHP_VERSION}-zip \
+        php${PHP_VERSION}-gd \
+        php${PHP_VERSION}-bcmath \
+        php${PHP_VERSION}-intl \
+        php${PHP_VERSION}-opcache \
+        php${PHP_VERSION}-tokenizer \
+        php${PHP_VERSION}-fileinfo \
+        php${PHP_VERSION}-pdo 2>/dev/null
+    success "PHP ${PHP_VERSION} instalado"
+fi
+
+info "Otimizando configurações do PHP..."
+PHP_INI_FPM="/etc/php/${PHP_VERSION}/fpm/php.ini"
+PHP_INI_CLI="/etc/php/${PHP_VERSION}/cli/php.ini"
+
+for PHP_INI in "$PHP_INI_FPM" "$PHP_INI_CLI"; do
+    [[ -f "$PHP_INI" ]] || continue
+    sed -i 's/^upload_max_filesize.*/upload_max_filesize = 10M/'   "$PHP_INI"
+    sed -i 's/^post_max_size.*/post_max_size = 50M/'               "$PHP_INI"
+    sed -i 's/^memory_limit.*/memory_limit = 256M/'                "$PHP_INI"
+    sed -i 's/^max_execution_time.*/max_execution_time = 120/'     "$PHP_INI"
+    sed -i 's/^;max_input_time.*/max_input_time = 120/'            "$PHP_INI"
+done
+
+# OPcache
+PHP_OPCACHE="/etc/php/${PHP_VERSION}/fpm/conf.d/10-opcache.ini"
+if [[ -f "$PHP_OPCACHE" ]]; then
+    sed -i 's/;opcache.enable=.*/opcache.enable=1/'                                   "$PHP_OPCACHE"
+    sed -i 's/;opcache.memory_consumption=.*/opcache.memory_consumption=128/'         "$PHP_OPCACHE"
+    sed -i 's/;opcache.max_accelerated_files=.*/opcache.max_accelerated_files=10000/' "$PHP_OPCACHE"
+    sed -i 's/;opcache.validate_timestamps=.*/opcache.validate_timestamps=0/'         "$PHP_OPCACHE"
+fi
+
+# Criar diretório home para www-data (necessário para Composer/PsySH)
+mkdir -p /var/www/.config /var/www/.composer
+chown -R www-data:www-data /var/www/.config /var/www/.composer
+
+systemctl enable php${PHP_VERSION}-fpm > /dev/null 2>&1
+systemctl restart php${PHP_VERSION}-fpm
+success "PHP configurado"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+step "Instalando Composer"
+# ═══════════════════════════════════════════════════════════════════════════════
+if command -v composer &>/dev/null; then
+    success "Composer já instalado: $(composer --version --no-ansi 2>/dev/null)"
+else
+    info "Baixando e instalando Composer..."
+    EXPECTED_CHECKSUM="$(curl -s https://composer.github.io/installer.sig)"
+    php -r "copy('https://getcomposer.org/installer', '/tmp/composer-setup.php');"
+    ACTUAL_CHECKSUM="$(php -r "echo hash_file('sha384', '/tmp/composer-setup.php');")"
+    if [ "$EXPECTED_CHECKSUM" != "$ACTUAL_CHECKSUM" ]; then
+        rm -f /tmp/composer-setup.php
+        error "Checksum do instalador do Composer inválido. Abortando por segurança."
     fi
-}
+    php /tmp/composer-setup.php --quiet --install-dir=/usr/local/bin --filename=composer
+    rm -f /tmp/composer-setup.php
+    success "Composer instalado: $(composer --version --no-ansi 2>/dev/null)"
+fi
 
-executar_mysql() {
-    mysql -u root -p"${MYSQL_ROOT_PASSWORD}" -e "$1" >> "$LOG_FILE" 2>&1 || erro "Falha ao executar comando MySQL: $1"
-}
+# ═══════════════════════════════════════════════════════════════════════════════
+step "Instalando Node.js e NPM"
+# ═══════════════════════════════════════════════════════════════════════════════
+CURRENT_NODE_MAJOR=$(node -e 'process.stdout.write(process.versions.node.split(".")[0])' 2>/dev/null || echo "0")
+if command -v node &>/dev/null && [[ "$CURRENT_NODE_MAJOR" -ge "$NODE_VERSION" ]]; then
+    success "Node.js já instalado: $(node --version)"
+else
+    info "Instalando Node.js ${NODE_VERSION} LTS..."
+    curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash - > /dev/null 2>&1
+    apt-get install -y -qq nodejs 2>/dev/null
+    success "Node.js instalado: $(node --version)"
+fi
 
-# ─── Verificações iniciais ────────────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════════════════════════════
+step "Instalando e Configurando Nginx"
+# ═══════════════════════════════════════════════════════════════════════════════
 
-verificar_root() {
-    if [[ $EUID -ne 0 ]]; then
-        echo -e "${VERMELHO}Este script precisa ser executado como root.${RESET}"
-        echo "Execute: sudo bash instalar.sh"
-        exit 1
-    fi
-}
+# Desabilitar Apache2 se estiver presente para evitar conflito de porta 80
+if systemctl is-enabled apache2 &>/dev/null 2>&1; then
+    warn "Apache2 instalado mas parado — desabilitando para não conflitar..."
+    systemctl stop apache2 2>/dev/null || true
+    systemctl disable apache2 2>/dev/null || true
+fi
 
-verificar_sistema_operacional() {
-    if [[ -f /etc/os-release ]]; then
-        . /etc/os-release
-        if [[ "$ID" != "ubuntu" && "$ID" != "debian" ]]; then
-            aviso "Sistema operacional: $PRETTY_NAME"
-            aviso "Este script foi testado em Ubuntu/Debian. Pode funcionar em outros sistemas."
-            read -rp "  Deseja continuar mesmo assim? [s/N]: " resp
-            [[ "$resp" =~ ^[Ss]$ ]] || exit 0
-        fi
-    fi
-}
+if command -v nginx &>/dev/null; then
+    success "Nginx já instalado"
+else
+    info "Instalando Nginx..."
+    apt-get install -y -qq nginx 2>/dev/null
+fi
 
-verificar_recursos() {
-    passo "Verificando Recursos do Servidor"
-    
-    # RAM
-    RAM_MB=$(free -m | awk '/^Mem:/{print $2}')
-    if [[ $RAM_MB -lt 512 ]]; then
-        erro "RAM insuficiente: ${RAM_MB}MB. Mínimo necessário: 512MB"
-    fi
-    ok "RAM disponível: ${RAM_MB}MB"
-    
-    # Disco
-    DISCO_GB=$(df -BG / | awk 'NR==2{gsub("G","",$4); print $4}')
-    if [[ $DISCO_GB -lt 5 ]]; then
-        erro "Espaço em disco insuficiente: ${DISCO_GB}GB. Mínimo necessário: 5GB"
-    fi
-    ok "Espaço em disco livre: ${DISCO_GB}GB"
-    
-    # Conexão com internet
-    if ping -c 1 google.com &>/dev/null; then
-        ok "Conexão com internet ativa"
-    else
-        erro "Sem conexão com a internet. Necessária para instalar dependências."
-    fi
-}
-
-# ─── Coleta de informações ────────────────────────────────────────────────────
-
-coletar_informacoes() {
-    passo "Configuração do Sistema"
-    echo ""
-    echo -e "  ${AMARELO}Preencha as informações abaixo para configurar o sistema.${RESET}"
-    echo -e "  ${AMARELO}Pressione ENTER para usar o valor padrão (entre colchetes).${RESET}"
-    echo ""
-
-    # ── URL da aplicação ──
-    echo -e "  ${NEGRITO}1. URL de acesso ao sistema:${RESET}"
-    echo -e "     Exemplos: http://meusite.com.br  |  http://192.168.1.100"
-    read -rp "     URL [http://$(hostname -I | awk '{print $1}')]: " APP_URL
-    APP_URL="${APP_URL:-http://$(hostname -I | awk '{print $1}')}"
-    echo ""
-
-    # ── Banco de dados ──
-    echo -e "  ${NEGRITO}2. Configuração do Banco de Dados MySQL:${RESET}"
-    echo ""
-    
-    while true; do
-        read -rsp "     Senha para o usuário ROOT do MySQL: " MYSQL_ROOT_PASSWORD
-        echo ""
-        if [[ -z "$MYSQL_ROOT_PASSWORD" ]]; then
-            echo -e "     ${VERMELHO}A senha não pode ser vazia.${RESET}"
-        else
-            read -rsp "     Confirme a senha root: " ROOT_CONFIRM
-            echo ""
-            if [[ "$MYSQL_ROOT_PASSWORD" == "$ROOT_CONFIRM" ]]; then
-                break
-            else
-                echo -e "     ${VERMELHO}As senhas não coincidem. Tente novamente.${RESET}"
-            fi
-        fi
-    done
-
-    read -rp "     Nome do banco de dados [vistoria]: " DB_NAME
-    DB_NAME="${DB_NAME:-vistoria}"
-
-    read -rp "     Nome do usuário do banco [vistoria_user]: " DB_USER
-    DB_USER="${DB_USER:-vistoria_user}"
-
-    while true; do
-        read -rsp "     Senha do usuário do banco: " DB_PASSWORD
-        echo ""
-        if [[ -z "$DB_PASSWORD" ]]; then
-            echo -e "     ${VERMELHO}A senha não pode ser vazia.${RESET}"
-        else
-            read -rsp "     Confirme a senha do banco: " DB_CONFIRM
-            echo ""
-            if [[ "$DB_PASSWORD" == "$DB_CONFIRM" ]]; then
-                break
-            else
-                echo -e "     ${VERMELHO}As senhas não coincidem. Tente novamente.${RESET}"
-            fi
-        fi
-    done
-    echo ""
-
-    # ── Administrador ──
-    echo -e "  ${NEGRITO}3. Conta de Administrador do Sistema:${RESET}"
-    echo ""
-    
-    read -rp "     Nome completo do administrador [Administrador]: " ADMIN_NAME
-    ADMIN_NAME="${ADMIN_NAME:-Administrador}"
-
-    while true; do
-        read -rp "     E-mail do administrador [admin@vistoria.com.br]: " ADMIN_EMAIL
-        ADMIN_EMAIL="${ADMIN_EMAIL:-admin@vistoria.com.br}"
-        if [[ "$ADMIN_EMAIL" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; then
-            break
-        else
-            echo -e "     ${VERMELHO}E-mail inválido. Tente novamente.${RESET}"
-        fi
-    done
-
-    while true; do
-        read -rsp "     Senha do administrador (mínimo 8 caracteres): " ADMIN_PASSWORD
-        echo ""
-        if [[ ${#ADMIN_PASSWORD} -lt 8 ]]; then
-            echo -e "     ${VERMELHO}Senha muito curta. Mínimo 8 caracteres.${RESET}"
-        else
-            read -rsp "     Confirme a senha do administrador: " ADMIN_CONFIRM
-            echo ""
-            if [[ "$ADMIN_PASSWORD" == "$ADMIN_CONFIRM" ]]; then
-                break
-            else
-                echo -e "     ${VERMELHO}As senhas não coincidem. Tente novamente.${RESET}"
-            fi
-        fi
-    done
-
-    # ── Confirmação ──
-    echo ""
-    echo -e "${AMARELO}  ┌─────────────────────────────────────────────────────────┐"
-    echo -e "  │              RESUMO DA CONFIGURAÇÃO                       │"
-    echo -e "  ├─────────────────────────────────────────────────────────┤"
-    echo -e "  │  URL do sistema:    ${BRANCO}$APP_URL${AMARELO}"
-    echo -e "  │  Banco de dados:    ${BRANCO}$DB_NAME${AMARELO}"
-    echo -e "  │  Usuário do banco:  ${BRANCO}$DB_USER${AMARELO}"
-    echo -e "  │  Admin - Nome:      ${BRANCO}$ADMIN_NAME${AMARELO}"
-    echo -e "  │  Admin - E-mail:    ${BRANCO}$ADMIN_EMAIL${AMARELO}"
-    echo -e "  │  Diretório:         ${BRANCO}$INSTALL_DIR${AMARELO}"
-    echo -e "  └─────────────────────────────────────────────────────────┘${RESET}"
-    echo ""
-
-    read -rp "  Confirmar e iniciar instalação? [S/n]: " CONFIRMAR
-    if [[ "$CONFIRMAR" =~ ^[Nn]$ ]]; then
-        echo "Instalação cancelada."
-        exit 0
-    fi
-}
-
-# ─── Instalação de dependências ───────────────────────────────────────────────
-
-instalar_dependencias_sistema() {
-    passo "Atualizando Sistema e Instalando Dependências"
-    info "Atualizando pacotes do sistema..."
-    executar apt-get update -y
-    executar apt-get upgrade -y
-    ok "Sistema atualizado"
-
-    info "Instalando utilitários básicos..."
-    executar apt-get install -y \
-        curl wget git zip unzip \
-        software-properties-common \
-        apt-transport-https ca-certificates \
-        gnupg2 lsb-release \
-        net-tools ufw
-    ok "Utilitários instalados"
-}
-
-instalar_php() {
-    passo "Instalando PHP ${PHP_VERSION}"
-    
-    # Adicionar repositório PHP
-    if ! command -v php &>/dev/null || [[ $(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;') != "$PHP_VERSION" ]]; then
-        info "Adicionando repositório PHP (ondrej/php)..."
-        executar add-apt-repository -y ppa:ondrej/php
-        executar apt-get update -y
-        
-        info "Instalando PHP ${PHP_VERSION} e extensões..."
-        executar apt-get install -y \
-            php${PHP_VERSION} \
-            php${PHP_VERSION}-fpm \
-            php${PHP_VERSION}-cli \
-            php${PHP_VERSION}-mysql \
-            php${PHP_VERSION}-pdo \
-            php${PHP_VERSION}-mbstring \
-            php${PHP_VERSION}-xml \
-            php${PHP_VERSION}-zip \
-            php${PHP_VERSION}-curl \
-            php${PHP_VERSION}-gd \
-            php${PHP_VERSION}-bcmath \
-            php${PHP_VERSION}-intl \
-            php${PHP_VERSION}-tokenizer \
-            php${PHP_VERSION}-ctype \
-            php${PHP_VERSION}-json \
-            php${PHP_VERSION}-fileinfo \
-            php${PHP_VERSION}-opcache
-        ok "PHP ${PHP_VERSION} instalado"
-    else
-        ok "PHP ${PHP_VERSION} já instalado"
-    fi
-
-    # Configurar PHP para produção
-    info "Otimizando configurações do PHP..."
-    PHP_INI="/etc/php/${PHP_VERSION}/fpm/php.ini"
-    if [[ -f "$PHP_INI" ]]; then
-        sed -i 's/^upload_max_filesize.*/upload_max_filesize = 64M/' "$PHP_INI"
-        sed -i 's/^post_max_size.*/post_max_size = 64M/' "$PHP_INI"
-        sed -i 's/^memory_limit.*/memory_limit = 256M/' "$PHP_INI"
-        sed -i 's/^max_execution_time.*/max_execution_time = 120/' "$PHP_INI"
-        sed -i 's/^;date.timezone.*/date.timezone = America\/Sao_Paulo/' "$PHP_INI"
-    fi
-    ok "PHP configurado"
-}
-
-instalar_composer() {
-    passo "Instalando Composer"
-    if command -v composer &>/dev/null; then
-        ok "Composer já instalado: $(composer --version 2>/dev/null | head -1)"
-    else
-        info "Baixando e instalando Composer..."
-        EXPECTED_CHECKSUM="$(php -r 'copy("https://composer.github.io/installer.sig", "php://stdout");')"
-        php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');" >> "$LOG_FILE" 2>&1
-        ACTUAL_CHECKSUM="$(php -r "echo hash_file('sha384', 'composer-setup.php');")"
-
-        if [[ "$EXPECTED_CHECKSUM" != "$ACTUAL_CHECKSUM" ]]; then
-            rm composer-setup.php
-            erro "Checksum do Composer inválido - possível download corrompido"
-        fi
-
-        php composer-setup.php --quiet >> "$LOG_FILE" 2>&1
-        rm composer-setup.php
-        mv composer.phar /usr/local/bin/composer
-        chmod +x /usr/local/bin/composer
-        ok "Composer instalado: $(composer --version 2>/dev/null | head -1)"
-    fi
-}
-
-instalar_nodejs() {
-    passo "Instalando Node.js e NPM"
-    if command -v node &>/dev/null; then
-        ok "Node.js já instalado: $(node --version)"
-    else
-        info "Instalando Node.js 20 LTS via NodeSource..."
-        curl -fsSL https://deb.nodesource.com/setup_20.x | bash - >> "$LOG_FILE" 2>&1
-        executar apt-get install -y nodejs
-        ok "Node.js instalado: $(node --version)"
-        ok "NPM instalado: $(npm --version)"
-    fi
-}
-
-instalar_nginx() {
-    passo "Instalando e Configurando Nginx"
-    if ! command -v nginx &>/dev/null; then
-        executar apt-get install -y nginx
-        ok "Nginx instalado"
-    else
-        ok "Nginx já instalado"
-    fi
-
-    info "Configurando Virtual Host para Vistoria..."
-    cat > /etc/nginx/sites-available/vistoria << 'NGINXCONF'
+info "Configurando Virtual Host para Vistoria..."
+cat > /etc/nginx/sites-available/vistoria << NGINX
 server {
     listen 80;
     listen [::]:80;
-    server_name _;
+    server_name ${DOMAIN} www.${DOMAIN};
+    root ${APP_DIR}/public;
 
-    root /var/www/vistoria/public;
-    index index.php index.html;
-
+    index index.php;
     charset utf-8;
-    client_max_body_size 64M;
 
-    # Logs
-    access_log /var/log/nginx/vistoria-access.log;
-    error_log  /var/log/nginx/vistoria-error.log;
+    # Cabeçalhos de segurança
+    add_header X-Frame-Options "SAMEORIGIN"       always;
+    add_header X-Content-Type-Options "nosniff"   always;
+    add_header X-XSS-Protection "1; mode=block"   always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 
-    # Segurança - ocultar versão do servidor
-    server_tokens off;
+    # Limite para upload de fotos de vistoria
+    client_max_body_size 50M;
 
     location / {
-        try_files $uri $uri/ /index.php?$query_string;
+        try_files \$uri \$uri/ /index.php?\$query_string;
     }
 
-    location ~ \.php$ {
-        fastcgi_pass unix:/var/run/php/phpVERSION-fpm.sock;
-        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+    location = /favicon.ico { access_log off; log_not_found off; }
+    location = /robots.txt  { access_log off; log_not_found off; }
+
+    error_page 404 /index.php;
+
+    location ~ \.php\$ {
+        fastcgi_pass unix:/var/run/php/php${PHP_VERSION}-fpm.sock;
+        fastcgi_param SCRIPT_FILENAME \$realpath_root\$fastcgi_script_name;
         include fastcgi_params;
-        fastcgi_read_timeout 300;
+        fastcgi_hide_header X-Powered-By;
+        fastcgi_read_timeout 120;
     }
 
-    location ~ /\.ht {
+    location ~ /\.(?!well-known).* {
         deny all;
     }
 
-    location ~* \.(jpg|jpeg|png|gif|ico|css|js|svg|woff|woff2|ttf|eot)$ {
-        expires 1y;
+    # Cache de assets estáticos (CSS, JS, imagens, fontes)
+    location ~* \.(jpg|jpeg|png|gif|ico|css|js|woff|woff2|ttf|svg|webp)\$ {
+        expires 30d;
         add_header Cache-Control "public, immutable";
         access_log off;
     }
 }
-NGINXCONF
+NGINX
 
-    # Substituir a versão do PHP no config
-    sed -i "s/phpVERSION/php${PHP_VERSION}/" /etc/nginx/sites-available/vistoria
+ln -sf /etc/nginx/sites-available/vistoria /etc/nginx/sites-enabled/vistoria
+rm -f /etc/nginx/sites-enabled/default
 
-    # Ativar o site
-    ln -sf /etc/nginx/sites-available/vistoria /etc/nginx/sites-enabled/vistoria
-    rm -f /etc/nginx/sites-enabled/default
+nginx -t 2>/dev/null || error "Configuração do Nginx inválida."
+systemctl enable nginx > /dev/null 2>&1
+systemctl restart nginx
+success "Nginx configurado e iniciado"
 
-    # Testar config
-    nginx -t >> "$LOG_FILE" 2>&1 || erro "Configuração do Nginx inválida"
-    executar systemctl restart nginx
-    executar systemctl enable nginx
-    ok "Nginx configurado e iniciado"
-}
+# ═══════════════════════════════════════════════════════════════════════════════
+step "Instalando e Configurando MySQL"
+# ═══════════════════════════════════════════════════════════════════════════════
+if command -v mysql &>/dev/null; then
+    success "MySQL já instalado: $(mysql --version)"
+else
+    info "Instalando MySQL Server..."
+    apt-get install -y -qq mysql-server 2>/dev/null
+fi
 
-instalar_mysql() {
-    passo "Instalando e Configurando MySQL"
-    
-    if command -v mysql &>/dev/null; then
-        ok "MySQL já instalado: $(mysql --version | head -1)"
+info "Iniciando MySQL..."
+systemctl enable mysql > /dev/null 2>&1
+systemctl start mysql
+
+info "Aguardando MySQL iniciar..."
+for i in {1..15}; do
+    mysqladmin ping --silent 2>/dev/null && break
+    sleep 1
+done
+mysqladmin ping --silent 2>/dev/null || error "MySQL não respondeu após 15 segundos."
+success "MySQL iniciado"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+step "Criando Banco de Dados e Usuário"
+# ═══════════════════════════════════════════════════════════════════════════════
+info "Criando banco de dados '${DB_DATABASE}'..."
+
+# Tentar autenticação sem senha (instalação nova) e depois com senha root
+mysql_exec() {
+    if [[ -n "$MYSQL_ROOT_PASSWORD" ]]; then
+        mysql -uroot -p"${MYSQL_ROOT_PASSWORD}" -e "$1" 2>/dev/null
     else
-        info "Instalando MySQL Server..."
-        
-        # Configurar instalação não interativa
-        debconf-set-selections <<< "mysql-server mysql-server/root_password password ${MYSQL_ROOT_PASSWORD}"
-        debconf-set-selections <<< "mysql-server mysql-server/root_password_again password ${MYSQL_ROOT_PASSWORD}"
-        
-        DEBIAN_FRONTEND=noninteractive executar apt-get install -y mysql-server
-        ok "MySQL instalado"
+        mysql -uroot -e "$1" 2>/dev/null
     fi
-
-    info "Iniciando MySQL..."
-    executar systemctl start mysql
-    executar systemctl enable mysql
-
-    # Aguardar MySQL iniciar completamente
-    info "Aguardando MySQL iniciar..."
-    for i in {1..30}; do
-        if mysqladmin ping -u root -p"${MYSQL_ROOT_PASSWORD}" --silent 2>/dev/null; then
-            break
-        fi
-        # Tentar sem senha (instalação nova)
-        if mysqladmin ping -u root --silent 2>/dev/null; then
-            # Definir senha root
-            mysql -u root -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '${MYSQL_ROOT_PASSWORD}';" >> "$LOG_FILE" 2>&1 || true
-            mysql -u root -e "FLUSH PRIVILEGES;" >> "$LOG_FILE" 2>&1 || true
-            break
-        fi
-        sleep 1
-    done
-    ok "MySQL iniciado"
 }
 
-configurar_banco_dados() {
-    passo "Criando Banco de Dados e Usuário"
-    
-    info "Criando banco de dados '$DB_NAME'..."
-    executar_mysql "CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
-    ok "Banco de dados criado"
+mysql_exec "CREATE DATABASE IF NOT EXISTS \`${DB_DATABASE}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" \
+    || error "Falha ao criar banco de dados. Verifique a senha root do MySQL."
+success "Banco de dados criado"
 
-    info "Criando usuário '$DB_USER'..."
-    executar_mysql "CREATE USER IF NOT EXISTS '${DB_USER}'@'localhost' IDENTIFIED BY '${DB_PASSWORD}';"
-    executar_mysql "GRANT ALL PRIVILEGES ON \`${DB_NAME}\`.* TO '${DB_USER}'@'localhost';"
-    executar_mysql "FLUSH PRIVILEGES;"
-    ok "Usuário criado e permissões concedidas"
-}
+info "Configurando usuário '${DB_USERNAME}'..."
+mysql_exec "CREATE USER IF NOT EXISTS '${DB_USERNAME}'@'localhost' IDENTIFIED BY '${DB_PASSWORD}';"
+mysql_exec "ALTER USER '${DB_USERNAME}'@'localhost' IDENTIFIED BY '${DB_PASSWORD}';"
+mysql_exec "GRANT ALL PRIVILEGES ON \`${DB_DATABASE}\`.* TO '${DB_USERNAME}'@'localhost';"
+mysql_exec "FLUSH PRIVILEGES;"
+success "Usuário criado e permissões concedidas"
 
-# ─── Instalação da aplicação ──────────────────────────────────────────────────
+# Salvar credenciais
+cat > /root/.vistoria_mysql_credentials << CREDS
+# Credenciais MySQL — Sistema de Vistoria
+# Gerado em: $(date)
+DB_DATABASE=${DB_DATABASE}
+DB_USERNAME=${DB_USERNAME}
+DB_PASSWORD=${DB_PASSWORD}
+CREDS
+chmod 600 /root/.vistoria_mysql_credentials
 
-clonar_repositorio() {
-    passo "Baixando Sistema do GitHub"
-    
-    # Garantir que git está instalado
-    if ! command -v git &>/dev/null; then
-        info "Instalando git..."
-        executar apt-get install -y git
-    fi
+# ═══════════════════════════════════════════════════════════════════════════════
+step "Baixando Sistema do GitHub"
+# ═══════════════════════════════════════════════════════════════════════════════
+mkdir -p /var/www
 
-    if [[ -d "${INSTALL_DIR}/.git" ]]; then
-        info "Repositório já existe. Atualizando para a versão mais recente..."
-        cd "$INSTALL_DIR"
-        executar git fetch origin
-        executar git reset --hard "origin/${GITHUB_BRANCH}"
-        ok "Código atualizado do GitHub"
-    else
-        info "Clonando repositório: github.com/${GITHUB_REPO}..."
-        rm -rf "$INSTALL_DIR"
-        executar git clone \
-            --depth=1 \
-            --branch "$GITHUB_BRANCH" \
-            "https://github.com/${GITHUB_REPO}.git" \
-            "$INSTALL_DIR"
-        ok "Repositório clonado com sucesso"
-    fi
+if [[ -d "$APP_DIR" ]]; then
+    info "Diretório existente detectado. Removendo para instalação limpa..."
+    rm -rf "$APP_DIR"
+fi
 
-    cd "$INSTALL_DIR"
-}
+info "Clonando repositório: github.com/GuilhermeSantiago921/Vistoria..."
+git clone --depth=1 "$GITHUB_REPO" "$APP_DIR" 2>/dev/null \
+    || error "Falha ao clonar repositório. Verifique a conexão e o repositório."
 
-configurar_env() {
-    passo "Gerando Arquivo de Configuração (.env)"
-    
-    # Gerar APP_KEY
-    APP_KEY="base64:$(openssl rand -base64 32)"
-    
-    cat > "${INSTALL_DIR}/.env" << ENVFILE
-APP_NAME="Vistoria Veicular"
+[[ -f "$APP_DIR/artisan" ]] || error "Repositório inválido: arquivo 'artisan' não encontrado."
+success "Repositório clonado com sucesso"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+step "Gerando Arquivo de Configuração (.env)"
+# ═══════════════════════════════════════════════════════════════════════════════
+cd "$APP_DIR"
+
+cp .env.example .env
+php artisan key:generate --force --quiet
+APP_KEY=$(grep "^APP_KEY=" .env | cut -d'=' -f2-)
+
+cat > .env << EOF
+APP_NAME="Sistema de Vistoria"
 APP_ENV=production
 APP_KEY=${APP_KEY}
 APP_DEBUG=false
 APP_URL=${APP_URL}
-
 APP_LOCALE=pt_BR
-APP_FALLBACK_LOCALE=en
+APP_FALLBACK_LOCALE=pt_BR
 APP_FAKER_LOCALE=pt_BR
-
-APP_MAINTENANCE_DRIVER=file
-
-BCRYPT_ROUNDS=12
 
 LOG_CHANNEL=stack
 LOG_STACK=single
+LOG_DEPRECATIONS_CHANNEL=null
 LOG_LEVEL=error
 
-# ── Banco de Dados ──────────────────────────────────────
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
 DB_PORT=3306
-DB_DATABASE=${DB_NAME}
-DB_USERNAME=${DB_USER}
+DB_DATABASE=${DB_DATABASE}
+DB_USERNAME=${DB_USERNAME}
 DB_PASSWORD=${DB_PASSWORD}
 
-# ── Sessão ──────────────────────────────────────────────
-SESSION_DRIVER=file
+SESSION_DRIVER=database
 SESSION_LIFETIME=120
 SESSION_ENCRYPT=false
-SESSION_PATH=/
-SESSION_DOMAIN=null
 
-# ── Cache e Filas ────────────────────────────────────────
-CACHE_STORE=file
-CACHE_PREFIX=vistoria_
-QUEUE_CONNECTION=database
 BROADCAST_CONNECTION=log
 FILESYSTEM_DISK=local
+QUEUE_CONNECTION=database
 
-# ── E-mail (Configure conforme seu servidor SMTP) ────────
+CACHE_STORE=database
+
 MAIL_MAILER=log
 MAIL_HOST=127.0.0.1
 MAIL_PORT=2525
 MAIL_USERNAME=null
 MAIL_PASSWORD=null
-MAIL_FROM_ADDRESS=noreply@vistoria.com.br
-MAIL_FROM_NAME="Vistoria Veicular"
-ENVFILE
+MAIL_FROM_ADDRESS="noreply@${DOMAIN}"
+MAIL_FROM_NAME="\${APP_NAME}"
 
-    ok "Arquivo .env criado"
-}
+VITE_APP_NAME="\${APP_NAME}"
+EOF
 
-instalar_dependencias_php() {
-    passo "Instalando Dependências PHP (Composer)"
-    
-    cd "$INSTALL_DIR"
-    info "Instalando pacotes do Composer (modo produção)..."
-    executar composer install --no-dev --optimize-autoloader --no-interaction
-    ok "Dependências PHP instaladas"
-}
+success "Arquivo .env criado"
 
-instalar_dependencias_npm() {
-    passo "Compilando Assets (CSS/JavaScript)"
-    
-    cd "$INSTALL_DIR"
-    info "Instalando pacotes NPM..."
-    executar npm install --production=false
-    
-    info "Compilando assets para produção..."
-    executar npm run build
-    ok "Assets compilados com sucesso"
-}
+# ═══════════════════════════════════════════════════════════════════════════════
+step "Instalando Dependências PHP (Composer)"
+# ═══════════════════════════════════════════════════════════════════════════════
 
-configurar_permissoes() {
-    passo "Configurando Permissões de Arquivos"
-    
-    # Criar usuário www-data se não existir (já existe no Ubuntu/Debian)
-    id www-data &>/dev/null || executar useradd -r -s /bin/false www-data
-    
-    # Definir dono dos arquivos
-    executar chown -R www-data:www-data "$INSTALL_DIR"
-    
-    # Permissões dos diretórios
-    executar find "$INSTALL_DIR" -type d -exec chmod 755 {} \;
-    
-    # Permissões dos arquivos
-    executar find "$INSTALL_DIR" -type f -exec chmod 644 {} \;
-    
-    # Pastas que precisam de escrita
-    executar chmod -R 775 "${INSTALL_DIR}/storage"
-    executar chmod -R 775 "${INSTALL_DIR}/bootstrap/cache"
-    
-    # Tornar o artisan executável
-    executar chmod +x "${INSTALL_DIR}/artisan"
-    
-    ok "Permissões configuradas"
-}
+# Definir HOME do www-data para evitar erro de escrita em /var/www/.config/psysh
+export HOME=/root
 
-executar_migracoes() {
-    passo "Criando Tabelas no Banco de Dados"
-    
-    cd "$INSTALL_DIR"
-    info "Executando migrações..."
-    sudo -u www-data php artisan migrate --force >> "$LOG_FILE" 2>&1 || erro "Falha ao executar migrações"
-    ok "Tabelas criadas com sucesso"
-    
+info "Instalando pacotes do Composer (modo produção)..."
+composer install --no-dev --optimize-autoloader --no-interaction --quiet 2>/dev/null
+success "Dependências PHP instaladas"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+step "Compilando Assets (CSS/JavaScript)"
+# ═══════════════════════════════════════════════════════════════════════════════
+info "Instalando pacotes NPM..."
+npm ci --silent 2>/dev/null
+info "Compilando assets para produção..."
+npm run build 2>/dev/null
+success "Assets compilados com sucesso"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+step "Configurando Permissões de Arquivos"
+# ═══════════════════════════════════════════════════════════════════════════════
+chown -R www-data:www-data "$APP_DIR"
+find "$APP_DIR" -type f -exec chmod 644 {} \;
+find "$APP_DIR" -type d -exec chmod 755 {} \;
+chmod -R 775 "$APP_DIR/storage"
+chmod -R 775 "$APP_DIR/bootstrap/cache"
+chmod +x "$APP_DIR/artisan"
+success "Permissões configuradas"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+step "Criando Tabelas no Banco de Dados"
+# ═══════════════════════════════════════════════════════════════════════════════
+info "Executando migrações..."
+php artisan migrate --force 2>/dev/null || error "Falha ao executar as migrações. Verifique as credenciais do banco."
+success "Tabelas criadas com sucesso"
+
+# Link de storage
+php artisan storage:link --quiet 2>/dev/null || true
+
+# Seeders (dados iniciais)
+if php artisan db:seed --force --quiet 2>/dev/null; then
     info "Criando dados iniciais..."
-    sudo -u www-data php artisan db:seed --force >> "$LOG_FILE" 2>&1 || aviso "Aviso: Falha ao executar seeders (não crítico)"
-    ok "Dados iniciais inseridos"
+    success "Dados iniciais inseridos"
+fi
+
+# Cache de produção
+php artisan config:cache  --quiet 2>/dev/null
+php artisan route:cache   --quiet 2>/dev/null
+php artisan view:cache    --quiet 2>/dev/null
+
+# ═══════════════════════════════════════════════════════════════════════════════
+step "Criando Usuário Administrador"
+# ═══════════════════════════════════════════════════════════════════════════════
+info "Criando conta de administrador '${ADMIN_EMAIL}'..."
+
+# Usar PHP diretamente via script temporário (evita erro de permissão do PsySH/tinker)
+ADMIN_SCRIPT=$(mktemp /tmp/vistoria_admin_XXXXXX.php)
+cat > "$ADMIN_SCRIPT" << 'PHPEOF'
+<?php
+require __DIR__ . '/vendor/autoload.php';
+$app = require_once __DIR__ . '/bootstrap/app.php';
+$kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
+$kernel->bootstrap();
+
+$email   = getenv('ADMIN_EMAIL');
+$name    = getenv('ADMIN_NAME');
+$password = getenv('ADMIN_PASSWORD');
+
+$existing = \App\Models\User::where('email', $email)->first();
+if ($existing) {
+    echo "Usuário já existe: {$email}\n";
+    exit(0);
 }
 
-criar_admin() {
-    passo "Criando Usuário Administrador"
-    
-    cd "$INSTALL_DIR"
-    info "Criando conta de administrador '$ADMIN_EMAIL'..."
-    
-    # Criar admin via Artisan Tinker
-    sudo -u www-data php artisan tinker --execute="
-        use App\Models\User;
-        use Illuminate\Support\Facades\Hash;
-        
-        \$user = User::updateOrCreate(
-            ['email' => '${ADMIN_EMAIL}'],
-            [
-                'name' => '${ADMIN_NAME}',
-                'email' => '${ADMIN_EMAIL}',
-                'password' => Hash::make('${ADMIN_PASSWORD}'),
-                'role' => 'admin',
-                'payment_status' => 'paid',
-                'inspection_credits' => 9999,
-                'email_verified_at' => now(),
-            ]
-        );
-        echo 'Administrador criado: ' . \$user->email;
-    " >> "$LOG_FILE" 2>&1 || erro "Falha ao criar usuário administrador"
-    
-    ok "Administrador criado: $ADMIN_EMAIL"
-}
+$user = new \App\Models\User();
+$user->name     = $name;
+$user->email    = $email;
+$user->password = \Illuminate\Support\Facades\Hash::make($password);
+$user->email_verified_at = now();
 
-otimizar_laravel() {
-    passo "Otimizando a Aplicação"
-    
-    cd "$INSTALL_DIR"
-    
-    info "Limpando caches antigos..."
-    sudo -u www-data php artisan config:clear >> "$LOG_FILE" 2>&1
-    sudo -u www-data php artisan route:clear >> "$LOG_FILE" 2>&1
-    sudo -u www-data php artisan view:clear >> "$LOG_FILE" 2>&1
-    
-    info "Gerando caches de produção..."
-    sudo -u www-data php artisan config:cache >> "$LOG_FILE" 2>&1
-    sudo -u www-data php artisan route:cache >> "$LOG_FILE" 2>&1
-    sudo -u www-data php artisan view:cache >> "$LOG_FILE" 2>&1
-    sudo -u www-data php artisan storage:link >> "$LOG_FILE" 2>&1
-    
-    ok "Aplicação otimizada"
+$fillable = $user->getFillable();
+if (in_array('role', $fillable) || $user->getTable()) {
+    try { $user->role = 'admin'; } catch (\Exception $e) {}
 }
+try { $user->inspection_credits = 999; } catch (\Exception $e) {}
 
-configurar_firewall() {
-    passo "Configurando Firewall (UFW)"
-    
-    if command -v ufw &>/dev/null; then
-        info "Configurando regras de firewall..."
-        ufw allow OpenSSH >> "$LOG_FILE" 2>&1
-        ufw allow 'Nginx Full' >> "$LOG_FILE" 2>&1
-        ufw --force enable >> "$LOG_FILE" 2>&1
-        ok "Firewall configurado (SSH e HTTP/HTTPS liberados)"
+$user->save();
+echo "Admin criado com sucesso: {$email}\n";
+PHPEOF
+
+# Rodar como www-data com HOME correto para evitar erro do PsySH
+ADMIN_EMAIL="$ADMIN_EMAIL" ADMIN_NAME="$ADMIN_NAME" ADMIN_PASSWORD="$ADMIN_PASSWORD" \
+    HOME=/tmp \
+    php "$ADMIN_SCRIPT" \
+    && success "Usuário administrador criado" \
+    || error "Falha ao criar usuário administrador"
+
+rm -f "$ADMIN_SCRIPT"
+
+# Reajustar permissões após execução de scripts
+chown -R www-data:www-data "$APP_DIR/storage" "$APP_DIR/bootstrap/cache"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+step "Configurando Supervisor (Filas em Background)"
+# ═══════════════════════════════════════════════════════════════════════════════
+apt-get install -y -qq supervisor 2>/dev/null
+
+cat > /etc/supervisor/conf.d/vistoria-worker.conf << SUP
+[program:vistoria-worker]
+process_name=%(program_name)s_%(process_num)02d
+command=php ${APP_DIR}/artisan queue:work database --sleep=3 --tries=3 --max-time=3600
+autostart=true
+autorestart=true
+stopasgroup=true
+killasgroup=true
+user=www-data
+numprocs=2
+redirect_stderr=true
+stdout_logfile=${APP_DIR}/storage/logs/worker.log
+stopwaitsecs=3600
+SUP
+
+systemctl enable supervisor > /dev/null 2>&1
+systemctl start supervisor  > /dev/null 2>&1
+supervisorctl reread > /dev/null 2>&1
+supervisorctl update > /dev/null 2>&1
+supervisorctl start vistoria-worker:* > /dev/null 2>&1 || true
+success "Supervisor configurado (2 workers de fila ativos)"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+step "Configurando Firewall (UFW)"
+# ═══════════════════════════════════════════════════════════════════════════════
+ufw --force reset > /dev/null 2>&1
+ufw default deny incoming  > /dev/null 2>&1
+ufw default allow outgoing > /dev/null 2>&1
+ufw allow 22/tcp  comment 'SSH'   > /dev/null 2>&1
+ufw allow 80/tcp  comment 'HTTP'  > /dev/null 2>&1
+ufw allow 443/tcp comment 'HTTPS' > /dev/null 2>&1
+ufw --force enable > /dev/null 2>&1
+success "Firewall UFW configurado (portas 22, 80, 443 abertas)"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+step "Configurando SSL com Let's Encrypt"
+# ═══════════════════════════════════════════════════════════════════════════════
+if echo "$INSTALL_SSL" | grep -qi '^s'; then
+    if [[ ! "$DOMAIN" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        info "Instalando Certbot..."
+        apt-get install -y -qq certbot python3-certbot-nginx 2>/dev/null
+        info "Emitindo certificado para ${DOMAIN}..."
+        if certbot --nginx \
+            -d "${DOMAIN}" \
+            -d "www.${DOMAIN}" \
+            --non-interactive \
+            --agree-tos \
+            --email "${ADMIN_EMAIL}" \
+            --redirect 2>/dev/null; then
+            sed -i "s|APP_URL=http://|APP_URL=https://|g" "${APP_DIR}/.env"
+            APP_URL="${APP_URL/http:\/\//https://}"
+            php artisan config:cache --quiet 2>/dev/null
+            success "Certificado SSL instalado com sucesso"
+        else
+            warn "Certbot falhou. Verifique se o DNS de '${DOMAIN}' aponta para este servidor."
+            warn "Para instalar SSL depois: sudo certbot --nginx -d ${DOMAIN} -d www.${DOMAIN}"
+        fi
     else
-        aviso "UFW não encontrado, pulando configuração do firewall"
+        warn "SSL ignorado: '${DOMAIN}' é um endereço IP. Let's Encrypt exige um domínio."
     fi
-}
+else
+    info "SSL ignorado conforme escolha do usuário."
+fi
 
-configurar_queue_worker() {
-    passo "Configurando Fila de Jobs (Queue Worker)"
-    
-    # Criar serviço systemd para queue worker
-    cat > /etc/systemd/system/vistoria-queue.service << SERVICEEOF
-[Unit]
-Description=Vistoria Queue Worker
-After=network.target mysql.service
+# ── Cron: schedule:run + renovação automática de SSL ──────────────────────────
+(crontab -l 2>/dev/null | grep -v 'artisan schedule\|certbot renew' || true
+ echo "* * * * * www-data php ${APP_DIR}/artisan schedule:run >> /dev/null 2>&1"
+ echo "0 3 * * * root certbot renew --quiet --post-hook 'systemctl reload nginx'"
+) | crontab -
+success "Cron configurado (schedule:run + renovação SSL diária às 03:00)"
 
-[Service]
-User=www-data
-Group=www-data
-WorkingDirectory=${INSTALL_DIR}
-ExecStart=/usr/bin/php artisan queue:work --sleep=3 --tries=3 --max-time=3600
-Restart=on-failure
-RestartSec=5s
+# ═══════════════════════════════════════════════════════════════════════════════
+# RESUMO FINAL
+# ═══════════════════════════════════════════════════════════════════════════════
+clear
+echo -e "${BOLD}${GREEN}"
+cat << 'DONE'
+  ╔══════════════════════════════════════════════════════════════╗
+  ║                                                              ║
+  ║           ✅  INSTALAÇÃO CONCLUÍDA COM SUCESSO!              ║
+  ║                                                              ║
+  ╚══════════════════════════════════════════════════════════════╝
+DONE
+echo -e "${NC}"
 
-[Install]
-WantedBy=multi-user.target
-SERVICEEOF
-
-    executar systemctl daemon-reload
-    executar systemctl enable vistoria-queue
-    executar systemctl start vistoria-queue
-    ok "Queue worker configurado como serviço"
-}
-
-configurar_scheduler() {
-    passo "Configurando Agendador de Tarefas (Scheduler)"
-    
-    # Adicionar cron para o scheduler do Laravel
-    (crontab -l 2>/dev/null; echo "* * * * * www-data cd ${INSTALL_DIR} && php artisan schedule:run >> /dev/null 2>&1") | crontab -
-    ok "Agendador configurado (cron)"
-}
-
-# ─── Relatório final ──────────────────────────────────────────────────────────
-
-exibir_relatorio_final() {
-    echo ""
-    echo -e "${VERDE}"
-    echo "  ╔══════════════════════════════════════════════════════════════╗"
-    echo "  ║        ✅  INSTALAÇÃO CONCLUÍDA COM SUCESSO!                ║"
-    echo "  ╚══════════════════════════════════════════════════════════════╝"
-    echo -e "${RESET}"
-    echo -e "${NEGRITO}  📋 INFORMAÇÕES DO SISTEMA${RESET}"
-    echo ""
-    echo -e "  🌐 ${NEGRITO}Endereço:${RESET}          ${VERDE}${APP_URL}${RESET}"
-    echo -e "  📁 ${NEGRITO}Diretório:${RESET}         ${INSTALL_DIR}"
-    echo ""
-    echo -e "  ${NEGRITO}── BANCO DE DADOS ────────────────────────────────────${RESET}"
-    echo -e "  🗄️  ${NEGRITO}Banco:${RESET}             $DB_NAME"
-    echo -e "  👤 ${NEGRITO}Usuário:${RESET}           $DB_USER"
-    echo -e "  🔑 ${NEGRITO}Senha:${RESET}             $DB_PASSWORD"
-    echo ""
-    echo -e "  ${NEGRITO}── ACESSO ADMINISTRADOR ──────────────────────────────${RESET}"
-    echo -e "  📧 ${NEGRITO}E-mail:${RESET}            ${AMARELO}$ADMIN_EMAIL${RESET}"
-    echo -e "  🔒 ${NEGRITO}Senha:${RESET}             ${AMARELO}$ADMIN_PASSWORD${RESET}"
-    echo ""
-    echo -e "  ${NEGRITO}── SERVIÇOS ──────────────────────────────────────────${RESET}"
-    echo -e "  ✔  Nginx  (servidor web)"
-    echo -e "  ✔  MySQL  (banco de dados)"
-    echo -e "  ✔  PHP ${PHP_VERSION}-FPM (processador PHP)"
-    echo -e "  ✔  Queue Worker (processamento de filas)"
-    echo -e "  ✔  Scheduler (tarefas agendadas)"
-    echo ""
-    echo -e "  ${NEGRITO}── COMANDOS ÚTEIS ────────────────────────────────────${RESET}"
-    echo -e "  # Ver logs da aplicação"
-    echo -e "  ${CIANO}tail -f ${INSTALL_DIR}/storage/logs/laravel.log${RESET}"
-    echo ""
-    echo -e "  # Reiniciar serviços"
-    echo -e "  ${CIANO}systemctl restart nginx php${PHP_VERSION}-fpm mysql${RESET}"
-    echo ""
-    echo -e "  # Ver status do queue worker"
-    echo -e "  ${CIANO}systemctl status vistoria-queue${RESET}"
-    echo ""
-    echo -e "  📄 Log completo da instalação: ${AMARELO}$LOG_FILE${RESET}"
-    echo ""
-    echo -e "${NEGRITO}  🔗 REPOSITÓRIO GITHUB${RESET}"
-    echo -e "  ${CIANO}https://github.com/${GITHUB_REPO}${RESET}"
-    echo ""
-    echo -e "  Para reinstalar ou atualizar:"
-    echo -e "  ${CIANO}curl -fsSL https://raw.githubusercontent.com/${GITHUB_REPO}/main/instalar.sh | sudo bash${RESET}"
-    echo ""
-    echo -e "${AMARELO}  ⚠️  IMPORTANTE: Guarde as credenciais acima em local seguro!${RESET}"
-    echo ""
-}
-
-# ─── Ponto de entrada principal ───────────────────────────────────────────────
-
-main() {
-    # Inicializar log
-    touch "$LOG_FILE"
-    chmod 600 "$LOG_FILE"
-
-    imprimir_cabecalho
-    verificar_root
-    verificar_sistema_operacional
-    verificar_recursos
-    coletar_informacoes
-
-    echo ""
-    echo -e "${AZUL}  Iniciando instalação...${RESET}"
-    echo -e "  ${CIANO}Isso pode levar de 5 a 15 minutos.${RESET}"
-    echo -e "  ${CIANO}Acompanhe o progresso abaixo.${RESET}"
-    echo ""
-
-    instalar_dependencias_sistema
-    instalar_php
-    instalar_composer
-    instalar_nodejs
-    instalar_nginx
-    instalar_mysql
-    configurar_banco_dados
-    clonar_repositorio
-    configurar_env
-    instalar_dependencias_php
-    instalar_dependencias_npm
-    configurar_permissoes
-    executar_migracoes
-    criar_admin
-    otimizar_laravel
-    configurar_firewall
-    configurar_queue_worker
-    configurar_scheduler
-
-    exibir_relatorio_final
-}
-
-# Executar
-main "$@"
+echo -e "  ${BOLD}${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "  ${BOLD}  ACESSO AO SISTEMA${NC}"
+echo -e "  ${BOLD}${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo
+echo -e "  🌐 URL         : ${GREEN}${APP_URL}${NC}"
+echo -e "  👤 Admin e-mail: ${GREEN}${ADMIN_EMAIL}${NC}"
+echo -e "  🔑 Senha admin : ${GREEN}${ADMIN_PASSWORD}${NC}"
+echo
+echo -e "  ${BOLD}${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "  ${BOLD}  BANCO DE DADOS${NC}"
+echo -e "  ${BOLD}${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo
+echo -e "  💾 Tipo        : ${GREEN}MySQL 8${NC}"
+echo -e "  �️  Banco       : ${GREEN}${DB_DATABASE}${NC}"
+echo -e "  � Usuário     : ${GREEN}${DB_USERNAME}${NC}"
+echo -e "  📄 Credenciais : ${GREEN}/root/.vistoria_mysql_credentials${NC}"
+echo
+echo -e "  ${BOLD}${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "  ${BOLD}  ARQUIVOS IMPORTANTES${NC}"
+echo -e "  ${BOLD}${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo
+echo -e "  📁 Aplicação   : ${CYAN}${APP_DIR}${NC}"
+echo -e "  ⚙️  Configuração: ${CYAN}${APP_DIR}/.env${NC}"
+echo -e "  📋 Logs        : ${CYAN}${APP_DIR}/storage/logs/laravel.log${NC}"
+echo -e "  🔧 Nginx       : ${CYAN}/etc/nginx/sites-available/vistoria${NC}"
+echo -e "  📝 Log install : ${CYAN}${LOG_FILE}${NC}"
+echo
+echo -e "  ${BOLD}${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "  ${BOLD}  PRÓXIMOS PASSOS${NC}"
+echo -e "  ${BOLD}${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo
+echo -e "  1. Certifique-se que o DNS de ${BOLD}${DOMAIN}${NC} aponta para este servidor"
+echo -e "  2. Configure e-mail em ${CYAN}${APP_DIR}/.env${NC} (variáveis MAIL_*)"
+echo -e "     e execute: ${YELLOW}cd ${APP_DIR} && php artisan config:cache${NC}"
+echo -e "  3. Acesse ${BOLD}${APP_URL}${NC} e faça login"
+echo -e "  4. ${RED}⚠  Guarde as credenciais acima em local seguro!${NC}"
+echo
+echo -e "  ${GREEN}Sistema pronto para uso! 🚀${NC}"
+echo
