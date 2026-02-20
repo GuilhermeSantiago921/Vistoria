@@ -529,8 +529,10 @@ step "Criando Usuário Administrador"
 # ═══════════════════════════════════════════════════════════════════════════════
 info "Criando conta de administrador '${ADMIN_EMAIL}'..."
 
+cd "$APP_DIR"
+
 # Usar PHP diretamente via script temporário (evita erro de permissão do PsySH/tinker)
-ADMIN_SCRIPT=$(mktemp /tmp/vistoria_admin_XXXXXX.php)
+ADMIN_SCRIPT=$(mktemp "$APP_DIR/vistoria_admin_XXXXXX.php")
 cat > "$ADMIN_SCRIPT" << 'PHPEOF'
 <?php
 require __DIR__ . '/vendor/autoload.php';
